@@ -1,0 +1,96 @@
+$app->post('/pos/checkout', function (Request $request, Response $response, $args) use ($pdo) {
+    $data = (array)$request->getParsedBody();
+    $cart = $data['cart'] ?? [];
+    $paymentMethod = $data['payment_method'] ?? 'Cash';
+    $tenderedAmount = $data['tendered_amount'] ?? 0;
+    $changeAmount = $data['change_amount'] ?? 0;
+    $splitCash = $data['split_cash'] ?? 0;
+    $splitCard = $data['split_card'] ?? 0;
+    $splitFawran = $data['split_fawran'] ?? 0;
+    $branchId = getActiveBranchId();
+
+    if (!$branchId) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Please select a branch first.']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    if (empty($cart)) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Cart is empty.']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    // Server-side cart validation using branch_stock
+    $stmtCheck = $pdo->prepare('SELECT p.id, p.selling_price, p.cost_price, bs.stock_count FROM products p JOIN branch_stock bs ON p.id = bs.product_id AND bs.branch_id = ? WHERE p.id = ?');
+    $subtotal = 0;
+    $totalCost = 0;
+    foreach ($cart as $item) {
+        $id       = (int)($item['id'] ?? 0);
+        $qty      = (int)($item['quantity'] ?? 0);
+        $price    = (float)($item['price'] ?? 0);
+        if ($id <= 0 || $qty <= 0 || $price < 0) {
+            $response->getBody()->write(json_encode(['success' => false, 'message' => 'Invalid item in cart.']));
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+        $stmtCheck->execute([$branchId, $id]);
+        $product = $stmtCheck->fetch();
+        if (!$product) {
+            $response->getBody()->write(json_encode(['success' => false, 'message' => "Product ID $id not found in this branch."]));
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+        if ($product['stock_count'] < $qty) {
+            $response->getBody()->write(json_encode(['success' => false, 'message' => "Insufficient stock for product ID $id in this branch."]));
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+        $subtotal += $price * $qty;
+        $totalCost += (float)$product['cost_price'] * $qty;
+    }
+
+    $discount = (float)($data['discount'] ?? 0);
+    $role = $_SESSION['user']['role'] ?? '';
+    
+    if ($role !== 'Admin' && $role !== 'Owner') {
+        $maxDiscount = $subtotal - $totalCost;
+        if ($maxDiscount < 0) $maxDiscount = 0;
+        if ($discount > $maxDiscount + 0.01) {
+            $response->getBody()->write(json_encode(['success' => false, 'message' => 'Discount exceeds maximum allowed for this order.']));
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $total = $subtotal - $discount;
+        if ($total < 0) $total = 0;
+        $total = round($total, 2);
+        $paid  = $total;
+        $due   = 0;
+
+        $invoiceId = 'INV-' . strtoupper(bin2hex(random_bytes(4)));
+        $cashierId = $_SESSION['user']['id'] ?? null;
+        
+        $stmtShift = $pdo->prepare("SELECT id FROM shifts WHERE user_id = ? AND status = 'Open' ORDER BY id DESC LIMIT 1");
+        $stmtShift->execute([$cashierId]);
+        $shiftId = $stmtShift->fetchColumn() ?: null;
+
+        $stmt = $pdo->prepare('INSERT INTO sales (invoice_id, cashier_id, total, paid, due, payment_method, tendered_amount, change_amount, split_cash, split_card, split_fawran, shift_id, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$invoiceId, $cashierId, $total, $paid, $due, $paymentMethod, $tenderedAmount, $changeAmount, $splitCash, $splitCard, $splitFawran, $shiftId, $branchId]);
+        $saleId = $pdo->lastInsertId();
+
+        $stmtItem        = $pdo->prepare('INSERT INTO sale_items (sale_id, product_id, quantity, price) VALUES (?, ?, ?, ?)');
+        $stmtUpdateStock = $pdo->prepare('UPDATE branch_stock SET stock_count = stock_count - ? WHERE product_id = ? AND branch_id = ?');
+
+        foreach ($cart as $item) {
+            $stmtItem->execute([$saleId, (int)$item['id'], (int)$item['quantity'], (float)$item['price']]);
+            $stmtUpdateStock->execute([(int)$item['quantity'], (int)$item['id'], $branchId]);
+        }
+
+        $pdo->commit();
+        $response->getBody()->write(json_encode(['success' => true, 'invoice_id' => $invoiceId, 'total' => $total]));
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Checkout failed: ' . $e->getMessage()]));
+    }
+
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Cashier']));

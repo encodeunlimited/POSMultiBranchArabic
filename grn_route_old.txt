@@ -1,0 +1,47 @@
+$app->post('/grn/add', function (Request $request, Response $response, $args) use ($pdo) {
+    $data = (array)$request->getParsedBody();
+    $branchId = getActiveBranchId();
+    $supplierId = !empty($data['supplier_id']) ? (int)$data['supplier_id'] : null;
+    $supplierName = $data['supplier_name'] ?? '';
+    $notes = $data['notes'] ?? '';
+    $items = $data['items'] ?? [];
+    
+    if (empty($items)) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'No items added to GRN']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        $ref = 'GRN-' . time();
+        $total = 0;
+        
+        $stmtGrn = $pdo->prepare('INSERT INTO grns (reference_no, supplier_name, supplier_id, branch_id, notes, created_by) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmtGrn->execute([$ref, $supplierName, $supplierId, $branchId, $notes, $_SESSION['user']['id']]);
+        $grnId = $pdo->lastInsertId();
+        
+        $stmtItem = $pdo->prepare('INSERT INTO grn_items (grn_id, product_id, quantity, cost_price) VALUES (?, ?, ?, ?)');
+        $stmtStock = $pdo->prepare('UPDATE branch_stock SET stock_count = stock_count + ? WHERE product_id = ? AND branch_id = ?');
+        $stmtCost = $pdo->prepare('UPDATE products SET cost_price = ? WHERE id = ?');
+        
+        foreach ($items as $item) {
+            $qty = (float)$item['quantity'];
+            $cost = (float)$item['cost'];
+            $total += ($qty * $cost);
+            
+            $stmtItem->execute([$grnId, $item['id'], $qty, $cost]);
+            $stmtStock->execute([$qty, $item['id'], $branchId]);
+            $stmtCost->execute([$cost, $item['id']]);
+        }
+        
+        $pdo->prepare('UPDATE grns SET total_amount = ? WHERE id = ?')->execute([$total, $grnId]);
+        
+        $pdo->commit();
+        $response->getBody()->write(json_encode(['success' => true, 'grn_id' => $grnId]));
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $response->getBody()->write(json_encode(['success' => false, 'message' => $e->getMessage()]));
+    }
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));

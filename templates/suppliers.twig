@@ -45,6 +45,9 @@
                         <td class="px-6 py-4 text-slate-600 truncate max-w-xs">{{ s.address|default('-') }}</td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex justify-end gap-2">
+                                <a href="/suppliers/view/{{ s.id }}" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 font-medium text-xs">
+                                    <i data-lucide="truck" class="w-4 h-4"></i> Profile
+                                </a>
                                 <button onclick='openEditModal({{ s|json_encode|raw }})' class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-lg transition-colors">
                                     <i data-lucide="edit-2" class="w-4 h-4"></i>
                                 </button>

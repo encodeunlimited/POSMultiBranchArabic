@@ -261,18 +261,43 @@
                 <label class="block text-sm font-medium text-slate-700 mb-2">Customer (Optional)</label>
                 <div class="relative">
                     <i data-lucide="user" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <select id="posCustomerSelect" class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium appearance-none">
+                    <select id="posCustomerSelect" onchange="handleCustomerSelect()" class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium appearance-none">
                         <option value="">Guest Walk-in</option>
                         {% for cust in customers %}
-                        <option value="{{ cust.id }}" data-name="{{ cust.name }}">{{ cust.name }} {% if cust.phone %}({{ cust.phone }}){% endif %}</option>
+                        <option value="{{ cust.id }}" data-name="{{ cust.name }}" data-points="{{ cust.loyalty_points|default(0) }}">{{ cust.name }} {% if cust.phone %}({{ cust.phone }}){% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>
             </div>
             
+            
+            <div id="loyaltySection" class="hidden bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-emerald-800 font-medium flex items-center gap-2">
+                        <i data-lucide="star" class="w-4 h-4 fill-emerald-500 text-emerald-500"></i> Available Points:
+                    </span>
+                    <span id="custPointsDisplay" class="font-black text-emerald-900">0</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="pointsToApply" min="0" step="1" placeholder="Points to apply" class="w-full px-3 py-2 border border-emerald-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500">
+                    <button onclick="applyLoyaltyPoints()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 whitespace-nowrap">Apply</button>
+                </div>
+                <p class="text-xs text-emerald-600 mt-2">100 points = QAR 1.00 discount</p>
+                
+                <div id="appliedPointsRow" class="hidden justify-between items-center mt-3 pt-3 border-t border-emerald-200">
+                    <span class="text-emerald-800 font-medium">Points Discount:</span>
+                    <span id="pointsDiscountAmount" class="font-bold text-rose-600">- QAR 0.00</span>
+                </div>
+                <input type="hidden" id="finalPointsApplied" value="0">
+            </div>
+
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-2">Payment Method</label>
                 <div class="grid grid-cols-2 gap-2">
+                    <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+                        <input type="radio" name="payment_method" value="Credit" class="text-indigo-600" onchange="handlePaymentMethodChange()"> 
+                        <i data-lucide="book-user" class="w-5 h-5 text-amber-600"></i> Credit Account
+                    </label>
                     <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
                         <input type="radio" name="payment_method" value="Cash" checked class="text-indigo-600" onchange="handlePaymentMethodChange()"> 
                         <i data-lucide="banknote" class="w-5 h-5 text-emerald-600"></i> Cash
@@ -609,10 +634,83 @@
         document.getElementById('splitCard').value = '0';
         document.getElementById('splitFawran').value = '0';
         document.getElementById('posCustomerSelect').value = '';
+        handleCustomerSelect();
         
         document.querySelector('input[name="payment_method"][value="Cash"]').checked = true;
         handlePaymentMethodChange();
         lucide.createIcons();
+    }
+
+    
+    function handleCustomerSelect() {
+        const select = document.getElementById('posCustomerSelect');
+        const pointsSection = document.getElementById('loyaltySection');
+        
+        // Reset points
+        document.getElementById('pointsToApply').value = '';
+        document.getElementById('finalPointsApplied').value = '0';
+        document.getElementById('appliedPointsRow').classList.add('hidden');
+        document.getElementById('appliedPointsRow').classList.remove('flex');
+        
+        if (select.value) {
+            const option = select.options[select.selectedIndex];
+            const points = parseInt(option.dataset.points) || 0;
+            if (points > 0) {
+                document.getElementById('custPointsDisplay').innerText = points;
+                pointsSection.classList.remove('hidden');
+            } else {
+                pointsSection.classList.add('hidden');
+            }
+        } else {
+            pointsSection.classList.add('hidden');
+            // If credit is selected, we must switch back to cash if no customer
+            const method = document.querySelector('input[name="payment_method"]:checked').value;
+            if (method === 'Credit') {
+                document.querySelector('input[name="payment_method"][value="Cash"]').checked = true;
+                handlePaymentMethodChange();
+                showToast('Credit requires a customer', 'warning');
+            }
+        }
+        
+        updateModalTotal();
+    }
+    
+    function applyLoyaltyPoints() {
+        const select = document.getElementById('posCustomerSelect');
+        const option = select.options[select.selectedIndex];
+        const maxPoints = parseInt(option.dataset.points) || 0;
+        let points = parseInt(document.getElementById('pointsToApply').value) || 0;
+        
+        if (points > maxPoints) {
+            points = maxPoints;
+            document.getElementById('pointsToApply').value = points;
+        }
+        
+        // Don't apply more points than the bill total
+        const maxPointsForBill = Math.floor(currentTotal * 100);
+        if (points > maxPointsForBill) {
+            points = maxPointsForBill;
+            document.getElementById('pointsToApply').value = points;
+            showToast('Cannot apply points beyond total amount', 'warning');
+        }
+        
+        if (points > 0) {
+            const discount = points / 100.0;
+            document.getElementById('finalPointsApplied').value = points;
+            document.getElementById('pointsDiscountAmount').innerText = `- QAR ${discount.toFixed(2)}`;
+            document.getElementById('appliedPointsRow').classList.remove('hidden');
+            document.getElementById('appliedPointsRow').classList.add('flex');
+            updateModalTotal();
+            showToast(`${points} points applied!`, 'success');
+        }
+    }
+    
+    function updateModalTotal() {
+        const pointsApplied = parseInt(document.getElementById('finalPointsApplied').value) || 0;
+        const pointsDiscount = pointsApplied / 100.0;
+        const newTotal = Math.max(0, currentTotal - pointsDiscount);
+        document.getElementById('modalTotalDue').innerText = `QAR ${newTotal.toFixed(2)}`;
+        calculateChange();
     }
 
     function closeCheckoutModal() {
@@ -622,6 +720,13 @@
 
     function handlePaymentMethodChange() {
         const method = document.querySelector('input[name="payment_method"]:checked').value;
+        
+        if (method === 'Credit' && !document.getElementById('posCustomerSelect').value) {
+            showToast('Please select a customer first to use Credit', 'error');
+            document.querySelector('input[name="payment_method"][value="Cash"]').checked = true;
+            return handlePaymentMethodChange();
+        }
+        
         const cashInput = document.getElementById('cashInputSection');
         const splitInput = document.getElementById('splitInputSection');
         const confirmBtn = document.getElementById('confirmCheckoutBtn');
@@ -709,7 +814,8 @@
                     split_cash: splitCash,
                     split_card: splitCard,
                     split_fawran: splitFawran,
-                    customer_id: document.getElementById('posCustomerSelect').value || null
+                    customer_id: document.getElementById('posCustomerSelect').value || null,
+                    points_applied: parseInt(document.getElementById('finalPointsApplied').value) || 0
                 })
             });
 

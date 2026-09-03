@@ -729,6 +729,11 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
     $splitCash = $data['split_cash'] ?? 0;
     $splitCard = $data['split_card'] ?? 0;
     $splitFawran = $data['split_fawran'] ?? 0;
+    
+    $customerId = !empty($data['customer_id']) ? (int)$data['customer_id'] : null;
+    $pointsApplied = (int)($data['points_applied'] ?? 0);
+    $pointsDiscount = $pointsApplied / 100.0; // 100 points = 1 QAR
+    
     $branchId = getActiveBranchId();
 
     if (!$branchId) {
@@ -738,6 +743,11 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
 
     if (empty($cart)) {
         $response->getBody()->write(json_encode(['success' => false, 'message' => 'Cart is empty.']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    
+    if ($paymentMethod === 'Credit' && !$customerId) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'A customer must be selected for Credit sales.']));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
@@ -768,6 +778,7 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
     }
 
     $discount = (float)($data['discount'] ?? 0);
+    $discount += $pointsDiscount;
     $role = $_SESSION['user']['role'] ?? '';
     
     if ($role !== 'Admin' && $role !== 'Owner') {
@@ -781,12 +792,28 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
 
     try {
         $pdo->beginTransaction();
+        
+        // Verify points if applying
+        if ($pointsApplied > 0 && $customerId) {
+            $stmtC = $pdo->prepare('SELECT loyalty_points FROM customers WHERE id = ?');
+            $stmtC->execute([$customerId]);
+            $cPoints = (int)$stmtC->fetchColumn();
+            if ($pointsApplied > $cPoints) {
+                throw new Exception("Not enough loyalty points.");
+            }
+        }
 
         $total = $subtotal - $discount;
         if ($total < 0) $total = 0;
         $total = round($total, 2);
-        $paid  = $total;
-        $due   = 0;
+        
+        $paid = $total;
+        $due = 0;
+        
+        if ($paymentMethod === 'Credit') {
+            $paid = 0;
+            $due = $total;
+        }
 
         $invoiceId = 'INV-' . strtoupper(bin2hex(random_bytes(4)));
         $cashierId = $_SESSION['user']['id'] ?? null;
@@ -795,8 +822,8 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
         $stmtShift->execute([$cashierId]);
         $shiftId = $stmtShift->fetchColumn() ?: null;
 
-        $stmt = $pdo->prepare('INSERT INTO sales (invoice_id, cashier_id, total, paid, due, payment_method, tendered_amount, change_amount, split_cash, split_card, split_fawran, shift_id, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$invoiceId, $cashierId, $total, $paid, $due, $paymentMethod, $tenderedAmount, $changeAmount, $splitCash, $splitCard, $splitFawran, $shiftId, $branchId]);
+        $stmt = $pdo->prepare('INSERT INTO sales (invoice_id, cashier_id, total, paid, due, payment_method, tendered_amount, change_amount, split_cash, split_card, split_fawran, shift_id, branch_id, customer_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$invoiceId, $cashierId, $total, $paid, $due, $paymentMethod, $tenderedAmount, $changeAmount, $splitCash, $splitCard, $splitFawran, $shiftId, $branchId, $customerId]);
         $saleId = $pdo->lastInsertId();
 
         $stmtItem        = $pdo->prepare('INSERT INTO sale_items (sale_id, product_id, quantity, price) VALUES (?, ?, ?, ?)');
@@ -805,6 +832,14 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
         foreach ($cart as $item) {
             $stmtItem->execute([$saleId, (int)$item['id'], (int)$item['quantity'], (float)$item['price']]);
             $stmtUpdateStock->execute([(int)$item['quantity'], (int)$item['id'], $branchId]);
+        }
+        
+        // Update Customer Balance and Loyalty
+        if ($customerId) {
+            $pointsEarned = floor($total); // 1 point per QAR spent
+            
+            $stmtCust = $pdo->prepare('UPDATE customers SET balance = balance + ?, loyalty_points = loyalty_points - ? + ? WHERE id = ?');
+            $stmtCust->execute([$due, $pointsApplied, $pointsEarned, $customerId]);
         }
 
         $pdo->commit();
@@ -1462,9 +1497,15 @@ $app->post('/grn/add', function (Request $request, Response $response, $args) us
     $supplierName = $data['supplier_name'] ?? '';
     $notes = $data['notes'] ?? '';
     $items = $data['items'] ?? [];
+    $paymentMethod = $data['payment_method'] ?? 'Cash';
     
     if (empty($items)) {
         $response->getBody()->write(json_encode(['success' => false, 'message' => 'No items added to GRN']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    
+    if ($paymentMethod === 'Credit' && !$supplierId) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Supplier must be selected for Credit purchases']));
         return $response->withHeader('Content-Type', 'application/json');
     }
     
@@ -1474,8 +1515,8 @@ $app->post('/grn/add', function (Request $request, Response $response, $args) us
         $ref = 'GRN-' . time();
         $total = 0;
         
-        $stmtGrn = $pdo->prepare('INSERT INTO grns (reference_no, supplier_name, supplier_id, branch_id, notes, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-        $stmtGrn->execute([$ref, $supplierName, $supplierId, $branchId, $notes, $_SESSION['user']['id']]);
+        $stmtGrn = $pdo->prepare('INSERT INTO grns (reference_no, supplier_name, supplier_id, branch_id, notes, payment_method, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmtGrn->execute([$ref, $supplierName, $supplierId, $branchId, $notes, $paymentMethod, $_SESSION['user']['id']]);
         $grnId = $pdo->lastInsertId();
         
         $stmtItem = $pdo->prepare('INSERT INTO grn_items (grn_id, product_id, quantity, cost_price) VALUES (?, ?, ?, ?)');
@@ -1492,7 +1533,12 @@ $app->post('/grn/add', function (Request $request, Response $response, $args) us
             $stmtCost->execute([$cost, $item['id']]);
         }
         
-        $pdo->prepare('UPDATE grns SET total_amount = ? WHERE id = ?')->execute([$total, $grnId]);
+        $paidAmount = ($paymentMethod === 'Credit') ? 0 : $total;
+        $pdo->prepare('UPDATE grns SET total_amount = ?, paid_amount = ? WHERE id = ?')->execute([$total, $paidAmount, $grnId]);
+        
+        if ($paymentMethod === 'Credit' && $supplierId) {
+            $pdo->prepare('UPDATE suppliers SET balance = balance + ? WHERE id = ?')->execute([$total, $supplierId]);
+        }
         
         $pdo->commit();
         $response->getBody()->write(json_encode(['success' => true, 'grn_id' => $grnId]));
@@ -1751,5 +1797,139 @@ $app->post('/customers/delete/{id}', function (Request $request, Response $respo
     return $response->withHeader('Content-Type', 'application/json');
 })->add($roleMiddleware(['Admin', 'Owner']));
 
+
+// =====================================================
+// CRM PROFILES & PAYMENTS
+// =====================================================
+
+$app->get('/customers/view/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = (int)$args['id'];
+    
+    // Get Customer
+    $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = ?');
+    $stmt->execute([$id]);
+    $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$customer) {
+        $response->getBody()->write("Customer not found.");
+        return $response->withStatus(404);
+    }
+    
+    // Get Sales History
+    $stmtS = $pdo->prepare('SELECT * FROM sales WHERE customer_id = ? ORDER BY sale_date DESC');
+    $stmtS->execute([$id]);
+    $sales = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get Payments History
+    $stmtP = $pdo->prepare('SELECT p.*, u.username as cashier_name FROM customer_payments p LEFT JOIN users u ON p.created_by = u.id WHERE p.customer_id = ? ORDER BY p.date DESC');
+    $stmtP->execute([$id]);
+    $payments = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+    
+    $view = Twig::fromRequest($request);
+    return $view->render($response, 'customer_profile.twig', [
+        'active_menu' => 'customers',
+        'customer' => $customer,
+        'sales' => $sales,
+        'payments' => $payments
+    ]);
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager', 'Cashier']));
+
+$app->post('/customers/pay/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = (int)$args['id'];
+    $data = (array)$request->getParsedBody();
+    $amount = (float)($data['amount'] ?? 0);
+    $method = $data['payment_method'] ?? 'Cash';
+    $notes = $data['notes'] ?? '';
+    
+    if ($amount <= 0) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Invalid amount']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    
+    $pdo->beginTransaction();
+    try {
+        // Record Payment
+        $stmtP = $pdo->prepare('INSERT INTO customer_payments (customer_id, amount, payment_method, notes, created_by) VALUES (?, ?, ?, ?, ?)');
+        $stmtP->execute([$id, $amount, $method, $notes, $_SESSION['user']['id']]);
+        
+        // Deduct Balance
+        $stmtB = $pdo->prepare('UPDATE customers SET balance = balance - ? WHERE id = ?');
+        $stmtB->execute([$amount, $id]);
+        
+        $pdo->commit();
+        $response->getBody()->write(json_encode(['success' => true]));
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Database error']));
+    }
+    
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner', 'Cashier']));
+
+$app->get('/suppliers/view/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = (int)$args['id'];
+    
+    // Get Supplier
+    $stmt = $pdo->prepare('SELECT * FROM suppliers WHERE id = ?');
+    $stmt->execute([$id]);
+    $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$supplier) {
+        $response->getBody()->write("Supplier not found.");
+        return $response->withStatus(404);
+    }
+    
+    // Get GRN History
+    $stmtG = $pdo->prepare('SELECT * FROM grns WHERE supplier_id = ? ORDER BY date DESC');
+    $stmtG->execute([$id]);
+    $grns = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get Payments History
+    $stmtP = $pdo->prepare('SELECT p.*, u.username as creator_name FROM supplier_payments p LEFT JOIN users u ON p.created_by = u.id WHERE p.supplier_id = ? ORDER BY p.date DESC');
+    $stmtP->execute([$id]);
+    $payments = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+    
+    $view = Twig::fromRequest($request);
+    return $view->render($response, 'supplier_profile.twig', [
+        'active_menu' => 'suppliers',
+        'supplier' => $supplier,
+        'grns' => $grns,
+        'payments' => $payments
+    ]);
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+$app->post('/suppliers/pay/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = (int)$args['id'];
+    $data = (array)$request->getParsedBody();
+    $amount = (float)($data['amount'] ?? 0);
+    $method = $data['payment_method'] ?? 'Cash';
+    $notes = $data['notes'] ?? '';
+    
+    if ($amount <= 0) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Invalid amount']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    
+    $pdo->beginTransaction();
+    try {
+        // Record Payment
+        $stmtP = $pdo->prepare('INSERT INTO supplier_payments (supplier_id, amount, payment_method, notes, created_by) VALUES (?, ?, ?, ?, ?)');
+        $stmtP->execute([$id, $amount, $method, $notes, $_SESSION['user']['id']]);
+        
+        // Deduct Balance
+        $stmtB = $pdo->prepare('UPDATE suppliers SET balance = balance - ? WHERE id = ?');
+        $stmtB->execute([$amount, $id]);
+        
+        $pdo->commit();
+        $response->getBody()->write(json_encode(['success' => true]));
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Database error']));
+    }
+    
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner']));
+
 $app->run();
+
 
