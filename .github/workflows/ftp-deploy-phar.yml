@@ -42,6 +42,9 @@ jobs:
           cp -r public/js deploy_package/js
           cp -r public/css deploy_package/css || true
           cp -r public/images deploy_package/images || true
+          
+          # 4. Generate version file for cache busting
+          echo "${{ github.sha }}" > deploy_package/version.txt
 
       - name: Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
