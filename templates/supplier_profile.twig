@@ -60,8 +60,14 @@
 
         <!-- GRNs Content -->
         <div id="content-grns" class="p-0">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="relative w-72">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="grnsSearch" placeholder="Search GRNs..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
+                <table class="w-full text-sm text-left" id="grnsTable">
                     <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
                         <tr>
                             <th class="px-6 py-4">Reference No</th>
@@ -102,12 +108,20 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                <span class="text-sm text-slate-500">Showing <span id="grnsCount" class="font-bold text-slate-900">{{ grns|length }}</span> records</span>
+            </div>
         </div>
-
         <!-- Payments Content -->
         <div id="content-payments" class="p-0 hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="relative w-72">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="paymentsSearch" placeholder="Search payments..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
+                <table class="w-full text-sm text-left" id="paymentsTable">
                     <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
                         <tr>
                             <th class="px-6 py-4">Date</th>
@@ -136,10 +150,12 @@
                     </tbody>
                 </table>
             </div>
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                <span class="text-sm text-slate-500">Showing <span id="paymentsCount" class="font-bold text-slate-900">{{ payments|length }}</span> records</span>
+            </div>
         </div>
     </div>
 </div>
-
 <!-- Payment Modal -->
 <div id="payModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
@@ -233,6 +249,10 @@
             showToast('Network error', 'error');
             btn.disabled = false;
         }
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+        new TailwindDataTable('grnsTable', 'grnsSearch', 'grnsCount');
+        new TailwindDataTable('paymentsTable', 'paymentsSearch', 'paymentsCount');
     });
 </script>
 {% endblock %}
