@@ -47,7 +47,7 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: 45.130.228.109
-          username: u600962660.mobileadmin
+          username: u600962660.mbposadmin
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy_package/
           server-dir: /
