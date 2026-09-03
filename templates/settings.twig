@@ -9,7 +9,7 @@
 </div>
 
 <div class="mb-6 flex gap-6 border-b border-slate-200 overflow-x-auto">
-    <button onclick="switchTab('identity')" id="tab-identity" class="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-2 whitespace-nowrap">
+    <button onclick="switchTab('identity')" id="tab-identity" class="px-4 py-3 text-sm font-medium text-indigo-700 border-b-2 border-indigo-700 flex items-center gap-2 whitespace-nowrap">
         <i data-lucide="store" class="w-4 h-4"></i> Shop Identity
     </button>
     {% if current_user.role in ['Owner', 'Admin'] %}
@@ -17,13 +17,13 @@
         <i data-lucide="building-2" class="w-4 h-4"></i> Branches
     </button>
     {% endif %}
-    <button onclick="switchTab('staff')" id="tab-staff" class="px-4 py-3 text-sm font-medium text-indigo-700 border-b-2 border-indigo-700 flex items-center gap-2 whitespace-nowrap">
+    <button onclick="switchTab('staff')" id="tab-staff" class="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-2 whitespace-nowrap">
         <i data-lucide="users" class="w-4 h-4"></i> Staff Accounts
     </button>
 </div>
 
 <!-- Shop Identity Section -->
-<div id="section-identity" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6">
+<div id="section-identity" class=" bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6">
     <div class="p-6 border-b border-slate-100 bg-slate-50/30">
         <h3 class="text-lg font-bold text-slate-900">Shop Identity</h3>
         <p class="text-sm text-slate-500">Manage the details that appear on invoices and system headers.</p>
@@ -144,7 +144,7 @@
 {% endif %}
 
 <!-- Staff Accounts Section -->
-<div id="section-staff" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+<div id="section-staff" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
     <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-slate-50/30">
         <div>
             <h3 class="text-lg font-bold text-slate-900">User Access Management</h3>
