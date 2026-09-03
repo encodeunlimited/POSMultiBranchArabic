@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
   deploy:
@@ -17,23 +18,30 @@ jobs:
         with:
           php-version: '8.2'
           tools: composer
+          ini-values: phar.readonly=0
 
       - name: Install dependencies
-        run: composer install --no-dev --optimize-autoloader --classmap-authoritative
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Build PHAR
-        run: php -d phar.readonly=0 build-phar.php
+        run: php build-phar.php
 
       - name: Prepare Host Environment
         run: |
-          # Swap in the host entry point that requires the PHAR
-          mv host-index.php public/index.php
-
-          # Assemble the slim deploy package — only PHAR + public + htaccess + db init
           mkdir deploy_package
-          cp app.phar deploy_package/
-          cp -r public deploy_package/
-          cp .htaccess deploy_package/
+          
+          # 1. Copy the generated pos.phar
+          cp pos.phar deploy_package/
+          
+          # 2. Copy host-index.php and rename it to index.php (this replaces public/index.php)
+          cp host-index.php deploy_package/index.php
+          
+          # 3. Copy static assets (served directly by web server)
+          cp public/.htaccess deploy_package/
+          cp public/favicon.png deploy_package/
+          cp -r public/js deploy_package/js
+          cp -r public/css deploy_package/css || true
+          cp -r public/images deploy_package/images || true
 
       - name: Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -42,6 +50,7 @@ jobs:
           username: u600962660.mobileadmin
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy_package/
+          server-dir: /public_html/
           exclude: |
             **/.git*
             **/.git*/**
