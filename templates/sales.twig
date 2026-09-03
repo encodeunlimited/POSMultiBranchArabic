@@ -1,6 +1,6 @@
 {% extends "layout.twig" %}
 
-{% block title %}Sales History | Global Smart{% endblock %}
+{% block title %}Sales History | MT POS and ERP{% endblock %}
 {% block header_title %}Sales History{% endblock %}
 
 {% block content %}
@@ -184,7 +184,7 @@
             const sale = data.sale;
             let html = `
                 <div class="text-center pt-2 pb-2 mx-4 text-slate-900 font-bold">
-                    <h2 class="text-xl uppercase tracking-widest mb-1">GLOBAL SMART</h2>
+                    <h2 class="text-xl uppercase tracking-widest mb-1">MUNEEFA TRADING</h2>
                     <p class="text-xs mt-1">${sale.sale_date}</p>
                     <p class="text-xs mt-0.5 font-bold">Contact : 7096 4494</p>
                 </div>
@@ -206,7 +206,7 @@
             `;
             
             let totalQty = 0;
-            let textRep = `Global Smart\nContact: 7096 4494\n--------------------------------\nInvoice: ${sale.invoice_id}\nDate: ${sale.sale_date}\nCashier: ${sale.cashier_name || 'System'}\nStatus: ${sale.status}\n--------------------------------\n`;
+            let textRep = `Muneefa Trading\nContact: 7096 4494\n--------------------------------\nInvoice: ${sale.invoice_id}\nDate: ${sale.sale_date}\nCashier: ${sale.cashier_name || 'System'}\nStatus: ${sale.status}\n--------------------------------\n`;
 
             sale.items.forEach((item, index) => {
                 const itemTotal = (item.quantity * item.price).toFixed(2);
@@ -216,6 +216,7 @@
                             <div class="flex justify-between items-start">
                                 <div class="w-full text-left leading-tight pr-2">
                                     ${index + 1}) ${item.product_name}
+                                    ${item.product_unit ? `<div class="text-[9px] text-slate-500 italic mt-0.5 ml-3">- Unit: ${item.product_unit}</div>` : ''}
                                 </div>
                             </div>
                             <div class="flex justify-between items-center mt-1 w-full pl-2">

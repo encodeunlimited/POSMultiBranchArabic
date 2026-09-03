@@ -1,6 +1,6 @@
 {% extends "layout.twig" %}
 
-{% block title %}Reports - Global Smart{% endblock %}
+{% block title %}Reports - MT POS and ERP{% endblock %}
 {% block header_title %}Business Reports{% endblock %}
 
 {% block content %}
@@ -30,7 +30,7 @@
         <button onclick="switchTab('sales')" id="tab-sales" class="px-5 py-3 font-semibold text-sm border-b-2 border-indigo-600 text-indigo-700 transition-colors whitespace-nowrap">Sales Report</button>
         <button onclick="switchTab('inventory')" id="tab-inventory" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Inventory & Stock</button>
         <button onclick="switchTab('pl')" id="tab-pl" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Profit & Loss</button>
-        <button onclick="switchTab('repairs')" id="tab-repairs" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Repair Report</button>
+        
         <button onclick="switchTab('shifts')" id="tab-shifts" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Shifts Report</button>
     </div>
 
@@ -130,28 +130,7 @@
         </div>
     </div>
 
-    <!-- REPAIRS TAB -->
-    <div id="content-repairs" class="hidden space-y-6">
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-slate-100 bg-amber-50/30">
-                <h3 class="font-bold text-amber-700 flex items-center gap-2"><i data-lucide="wrench" class="w-5 h-5"></i> Repairs by Category</h3>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                            <th class="px-6 py-3">Category Name</th>
-                            <th class="px-6 py-3">Total Repairs</th>
-                            <th class="px-6 py-3">Generated Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody id="repairCategoryTableBody" class="divide-y divide-slate-100">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- SHIFTS TAB -->
     <div id="content-shifts" class="hidden space-y-6">
@@ -266,7 +245,7 @@
 
     function switchTab(tabId) {
         // Reset Tabs
-        ['sales', 'inventory', 'pl', 'repairs', 'shifts'].forEach(id => {
+        ['sales', 'inventory', 'pl', 'shifts'].forEach(id => {
             const btn = document.getElementById(`tab-${id}`);
             const content = document.getElementById(`content-${id}`);
             
@@ -297,7 +276,7 @@
         const endDate = document.getElementById('endDate').value;
         const btn = document.getElementById('generateBtn');
         const loading = document.getElementById('loadingState');
-        const contents = ['content-sales', 'content-inventory', 'content-pl', 'content-repairs', 'content-shifts'];
+        const contents = ['content-sales', 'content-inventory', 'content-pl', 'content-shifts'];
         
         btn.disabled = true;
         btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Loading...';
@@ -316,7 +295,7 @@
             renderSales(data.sales);
             renderInventory(data.inventory);
             renderPL(data.pl, startDate, endDate);
-            if(data.repairs) renderRepairs(data.repairs);
+            
             if(data.shifts) renderShifts(data.shifts);
             
             showToast('Reports generated successfully.', 'success');
@@ -404,23 +383,7 @@
             });
         }
     }
-    function renderRepairs(data) {
-        const repairCatTbody = document.getElementById('repairCategoryTableBody');
-        repairCatTbody.innerHTML = '';
-        if(!data || !data.by_category || data.by_category.length === 0) {
-            repairCatTbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-slate-500">No repairs found for this period</td></tr>';
-        } else {
-            data.by_category.forEach(cat => {
-                repairCatTbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-3 font-medium text-slate-900">${escapeHtml(cat.category_name || 'Uncategorized')}</td>
-                        <td class="px-6 py-3 text-slate-700">${cat.count}</td>
-                        <td class="px-6 py-3 font-bold text-emerald-600">QAR ${parseFloat(cat.revenue).toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-        }
-    }
+    
 
     function renderShifts(data) {
         const tbody = document.getElementById('shiftsTableBody');
@@ -466,12 +429,10 @@
         document.getElementById('plDateRange').innerText = `${start} to ${end}`;
         
         document.getElementById('plProdRev').innerText = 'QAR ' + parseFloat(data.products_revenue).toFixed(2);
-        document.getElementById('plRepRev').innerText = 'QAR ' + parseFloat(data.repairs_revenue).toFixed(2);
-        document.getElementById('plTotalRev').innerText = 'QAR ' + parseFloat(data.products_revenue + data.repairs_revenue).toFixed(2);
+                document.getElementById('plTotalRev').innerText = 'QAR ' + parseFloat(data.products_revenue).toFixed(2);
 
         document.getElementById('plProdCogs').innerText = 'QAR ' + parseFloat(data.products_cogs).toFixed(2);
-        document.getElementById('plRepCogs').innerText = 'QAR ' + parseFloat(data.repairs_cogs).toFixed(2);
-        document.getElementById('plTotalCogs').innerText = 'QAR ' + parseFloat(data.products_cogs + data.repairs_cogs).toFixed(2);
+                document.getElementById('plTotalCogs').innerText = 'QAR ' + parseFloat(data.products_cogs).toFixed(2);
 
         document.getElementById('plGrossProfit').innerText = 'QAR ' + parseFloat(data.gross_profit).toFixed(2);
         document.getElementById('plExpenses').innerText = 'QAR ' + parseFloat(data.expenses).toFixed(2);

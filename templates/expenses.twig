@@ -1,6 +1,6 @@
 {% extends "layout.twig" %}
 
-{% block title %}Expenses | Global Smart{% endblock %}
+{% block title %}Expenses | MT POS and ERP{% endblock %}
 {% block header_title %}Daily Expenses{% endblock %}
 
 {% block content %}
@@ -73,6 +73,7 @@
                 <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
                     <tr>
                         <th class="px-6 py-4">ID</th>
+                        <th class="px-6 py-4">Branch</th>
                         <th class="px-6 py-4">Category</th>
                         <th class="px-6 py-4">Description</th>
                         <th class="px-6 py-4">Date</th>
@@ -84,6 +85,11 @@
                     {% for expense in expenses %}
                     <tr class="hover:bg-slate-50/50 transition-colors">
                         <td class="px-6 py-4 font-medium text-slate-900">#{{ expense.id }}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
+                                <i data-lucide="store" class="w-3 h-3 mr-1"></i> {{ expense.branch_name ?? 'Global' }}
+                            </span>
+                        </td>
                         <td class="px-6 py-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                                 {{ expense.category_name ?? 'Uncategorized' }}

@@ -48,8 +48,8 @@ $pdo->exec('PRAGMA foreign_keys=ON');
 // =====================================================
 function getActiveBranchId() {
     $role = $_SESSION['user']['role'] ?? '';
-    if ($role === 'Owner') {
-        // Owner can switch branches; use active_branch_id from session
+    if ($role === 'Owner' || $role === 'Admin') {
+        // Owner and Admin can switch branches; use active_branch_id from session
         return $_SESSION['active_branch_id'] ?? null; // null = all branches
     }
     return $_SESSION['user']['branch_id'] ?? null;
@@ -170,7 +170,8 @@ $app->post('/api/switch-branch', function (Request $request, Response $response,
     $data = (array)$request->getParsedBody();
     $branchId = $data['branch_id'] ?? null;
     
-    if (($_SESSION['user']['role'] ?? '') !== 'Owner') {
+    $role = $_SESSION['user']['role'] ?? '';
+    if ($role !== 'Owner' && $role !== 'Admin') {
         $response->getBody()->write(json_encode(['success' => false, 'message' => 'Unauthorized']));
         return $response->withHeader('Content-Type', 'application/json');
     }
@@ -232,20 +233,6 @@ $app->get('/', function (Request $request, Response $response, $args) use ($pdo)
         $stmt->execute(array_merge([$startDate . ' 00:00:00', $endDate . ' 23:59:59'], $branchParams));
         $products_cogs = $stmt->fetchColumn() ?: 0;
 
-        // Repairs Revenue & Cost
-        $repBranchFilter = $branchId ? ' AND r.branch_id = ?' : '';
-        $repBranchParams = $branchId ? [$branchId] : [];
-        
-        $stmt = $pdo->prepare("SELECT SUM(COALESCE(NULLIF(actual_shop_cost,''), estimated_cost)) FROM repair_logs r WHERE status = 'Completed' AND created_at BETWEEN ? AND ?" . $repBranchFilter);
-        $stmt->execute(array_merge([$startDate . ' 00:00:00', $endDate . ' 23:59:59'], $repBranchParams));
-        $repairs_revenue = $stmt->fetchColumn() ?: 0;
-
-        $stmt = $pdo->prepare("SELECT SUM(real_cost) FROM repair_logs r WHERE status = 'Completed' AND created_at BETWEEN ? AND ?" . $repBranchFilter);
-        $stmt->execute(array_merge([$startDate . ' 00:00:00', $endDate . ' 23:59:59'], $repBranchParams));
-        $repairs_cogs = $stmt->fetchColumn() ?: 0;
-
-        $total_revenue = $products_revenue + $repairs_revenue;
-
         // Expenses
         $stmt = $pdo->prepare("SELECT SUM(amount) FROM expenses WHERE expense_date BETWEEN ? AND ?" . $expBranchFilter);
         $stmt->execute(array_merge([$startDate . ' 00:00:00', $endDate . ' 23:59:59'], $expBranchParams));
@@ -253,8 +240,7 @@ $app->get('/', function (Request $request, Response $response, $args) use ($pdo)
 
         // Net Profit
         $products_profit = $products_revenue - $products_cogs;
-        $repairs_profit = $repairs_revenue - $repairs_cogs;
-        $net_profit = $products_profit + $repairs_profit - $total_expenses;
+        $net_profit = $products_profit - $total_expenses;
 
         // Inventory (branch-aware using branch_stock)
         if ($branchId) {
@@ -289,14 +275,13 @@ $app->get('/', function (Request $request, Response $response, $args) use ($pdo)
 
         $stats = [
             'products_revenue' => $products_revenue,
-            'repairs_revenue'  => $repairs_revenue,
-            'total_revenue'    => $total_revenue,
+            'total_revenue'    => $products_revenue,
             'total_expenses'   => $total_expenses,
             'net_profit'       => $net_profit,
             'total_inventory'  => $total_inventory,
             'low_stock_count'  => $low_stock_count,
             'outstanding_dues' => $outstanding_dues,
-            'total_cogs'       => $products_cogs + $repairs_cogs
+            'total_cogs'       => $products_cogs
         ];
         
         // Owner: Per-branch breakdown
@@ -411,11 +396,15 @@ $app->get('/inventory', function (Request $request, Response $response, $args) u
     $stmtBr = $pdo->query('SELECT * FROM branches WHERE is_active = 1 ORDER BY name ASC');
     $branches = $stmtBr->fetchAll(PDO::FETCH_ASSOC);
 
+    $stmtUnits = $pdo->query('SELECT * FROM units ORDER BY name ASC');
+    $units = $stmtUnits->fetchAll(PDO::FETCH_ASSOC);
+
     $view = Twig::fromRequest($request);
     return $view->render($response, 'inventory.twig', [
         'products' => $products,
         'categories' => $categories,
         'branches' => $branches,
+        'units' => $units,
         'active_menu' => 'inventory'
     ]);
 });
@@ -429,15 +418,17 @@ $app->post('/inventory/add', function (Request $request, Response $response, $ar
     $stock_count = $data['stock_count'] ?? 0;
     $min_stock = $data['min_stock'] ?? 5;
     $barcode = $data['barcode'] ?? '';
-    $warranty = $data['warranty'] ?? '';
+    $unit = $data['unit'] ?? 'PCS';
+    $arabic_name = $data['arabic_name'] ?? '';
+    $expiry_date = !empty($data['expiry_date']) ? $data['expiry_date'] : null;
     $branchId = getActiveBranchId();
 
     try {
         $pdo->beginTransaction();
         
         // Insert product into global catalog (stock_count stays 0 in products table)
-        $stmt = $pdo->prepare('INSERT INTO products (name, category_id, cost_price, selling_price, stock_count, min_stock, barcode, warranty) VALUES (?, ?, ?, ?, 0, ?, ?, ?)');
-        $stmt->execute([$name, $category_id, $cost_price, $selling_price, $min_stock, $barcode, $warranty]);
+        $stmt = $pdo->prepare('INSERT INTO products (name, arabic_name, category_id, cost_price, selling_price, stock_count, min_stock, barcode, unit, expiry_date) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)');
+        $stmt->execute([$name, $arabic_name, $category_id, $cost_price, $selling_price, $min_stock, $barcode, $unit, $expiry_date]);
         $productId = $pdo->lastInsertId();
         
         // Add stock to the active branch (or all branches if owner with no branch selected)
@@ -484,6 +475,34 @@ $app->post('/category/add', function (Request $request, Response $response, $arg
 $app->post('/category/delete/{id}', function (Request $request, Response $response, $args) use ($pdo) {
     $id = $args['id'];
     $stmt = $pdo->prepare('DELETE FROM categories WHERE id = ?');
+    $stmt->execute([$id]);
+
+    $response->getBody()->write(json_encode(['success' => true]));
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Stock Manager']));
+
+$app->post('/unit/add', function (Request $request, Response $response, $args) use ($pdo) {
+    $data = (array)$request->getParsedBody();
+    $name = $data['name'] ?? '';
+    $allow_fractional = isset($data['allow_fractional']) && $data['allow_fractional'] === 'on' ? 1 : 0;
+
+    if (!empty($name)) {
+        $stmt = $pdo->prepare('INSERT INTO units (name, allow_fractional) VALUES (?, ?)');
+        try {
+            $stmt->execute([$name, $allow_fractional]);
+            $response->getBody()->write(json_encode(['success' => true]));
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['success' => false, 'message' => 'Unit already exists.']));
+        }
+    } else {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Name required.']));
+    }
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Stock Manager']));
+
+$app->post('/unit/delete/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = $args['id'];
+    $stmt = $pdo->prepare('DELETE FROM units WHERE id = ?');
     $stmt->execute([$id]);
 
     $response->getBody()->write(json_encode(['success' => true]));
@@ -556,7 +575,7 @@ $app->get('/sales/view/{id}', function (Request $request, Response $response, $a
     }
 
     $stmtItems = $pdo->prepare('
-        SELECT si.*, p.name as product_name
+        SELECT si.*, p.name as product_name, p.unit as product_unit
         FROM sale_items si
         LEFT JOIN products p ON si.product_id = p.id
         WHERE si.sale_id = ?
@@ -649,11 +668,16 @@ $app->get('/pos', function (Request $request, Response $response, $args) use ($p
     // Fetch categories
     $stmtCats = $pdo->query('SELECT * FROM categories ORDER BY name ASC');
     $categories = $stmtCats->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Fetch fractional units
+    $stmtUnits = $pdo->query('SELECT name FROM units WHERE allow_fractional = 1');
+    $fractional_units = $stmtUnits->fetchAll(PDO::FETCH_COLUMN);
 
     $view = Twig::fromRequest($request);
     return $view->render($response, 'pos.twig', [
         'products' => $products,
         'categories' => $categories,
+        'fractional_units' => $fractional_units,
         'active_menu' => 'pos',
         'active_shift' => $activeShift ?: null,
         'needs_branch_selection' => false
@@ -790,103 +814,6 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
         $response->getBody()->write(json_encode(['success' => false, 'message' => 'Checkout failed: ' . $e->getMessage()]));
     }
 
-    return $response->withHeader('Content-Type', 'application/json');
-})->add($roleMiddleware(['Admin', 'Cashier']));
-
-// =====================================================
-// REPAIRS MODULE (branch-aware)
-// =====================================================
-$app->get('/repairs', function (Request $request, Response $response, $args) use ($pdo) {
-    $branchId = getActiveBranchId();
-    
-    if ($branchId) {
-        $stmt = $pdo->prepare('
-            SELECT r.*, rc.name as category_name, b.name as branch_name
-            FROM repair_logs r
-            LEFT JOIN repair_categories rc ON r.category_id = rc.id
-            LEFT JOIN branches b ON r.branch_id = b.id
-            WHERE r.branch_id = ?
-            ORDER BY r.id DESC
-        ');
-        $stmt->execute([$branchId]);
-    } else {
-        $stmt = $pdo->query('
-            SELECT r.*, rc.name as category_name, b.name as branch_name
-            FROM repair_logs r
-            LEFT JOIN repair_categories rc ON r.category_id = rc.id
-            LEFT JOIN branches b ON r.branch_id = b.id
-            ORDER BY r.id DESC
-        ');
-    }
-    $repairs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $stmt = $pdo->query('SELECT * FROM repair_categories ORDER BY name ASC');
-    $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $view = Twig::fromRequest($request);
-    return $view->render($response, 'repairs.twig', [
-        'repairs' => $repairs,
-        'categories' => $categories,
-        'active_menu' => 'repairs'
-    ]);
-})->add($roleMiddleware(['Admin', 'Cashier']));
-
-$app->post('/repairs/add', function (Request $request, Response $response, $args) use ($pdo) {
-    $data = (array)$request->getParsedBody();
-    $branchId = getActiveBranchId();
-    
-    $customer_name = $data['customer_name'] ?? '';
-    $phone = $data['phone'] ?? '';
-    $category_id = $data['category_id'] ?? null;
-    $device_issue = $data['device_issue'] ?? '';
-    $estimated_cost = $data['estimated_cost'] ?? 0;
-    $real_cost = $data['real_cost'] ?? 0;
-    $warranty = $data['warranty'] ?? '';
-    $status = 'Pending';
-    
-    $stmt = $pdo->prepare('INSERT INTO repair_logs (customer_name, phone, category_id, device_issue, estimated_cost, real_cost, warranty, status, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$customer_name, $phone, $category_id, $device_issue, $estimated_cost, $real_cost, $warranty, $status, $branchId]);
-
-    $response->getBody()->write(json_encode(['success' => true]));
-    return $response->withHeader('Content-Type', 'application/json');
-})->add($roleMiddleware(['Admin', 'Cashier']));
-
-$app->post('/repair-category/add', function (Request $request, Response $response, $args) use ($pdo) {
-    $data = (array)$request->getParsedBody();
-    $name = $data['name'] ?? '';
-
-    if (!empty($name)) {
-        $stmt = $pdo->prepare('INSERT INTO repair_categories (name) VALUES (?)');
-        try {
-            $stmt->execute([$name]);
-            $response->getBody()->write(json_encode(['success' => true]));
-        } catch (PDOException $e) {
-            $response->getBody()->write(json_encode(['success' => false, 'message' => 'Category already exists or error.']));
-        }
-    } else {
-        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Name required.']));
-    }
-    return $response->withHeader('Content-Type', 'application/json');
-})->add($roleMiddleware(['Admin', 'Cashier']));
-
-$app->post('/repair-category/delete/{id}', function (Request $request, Response $response, $args) use ($pdo) {
-    $id = $args['id'];
-    $stmt = $pdo->prepare('DELETE FROM repair_categories WHERE id = ?');
-    $stmt->execute([$id]);
-
-    $response->getBody()->write(json_encode(['success' => true]));
-    return $response->withHeader('Content-Type', 'application/json');
-})->add($roleMiddleware(['Admin', 'Cashier']));
-
-$app->post('/repairs/set-warranty/{id}', function (Request $request, Response $response, $args) use ($pdo) {
-    $id = $args['id'];
-    $data = (array)$request->getParsedBody();
-    $warranty = $data['warranty'] ?? '';
-    
-    $stmt = $pdo->prepare('UPDATE repair_logs SET warranty = ? WHERE id = ?');
-    $stmt->execute([$warranty, $id]);
-    
-    $response->getBody()->write(json_encode(['success' => true]));
     return $response->withHeader('Content-Type', 'application/json');
 })->add($roleMiddleware(['Admin', 'Cashier']));
 
@@ -1202,15 +1129,17 @@ $app->post('/products/edit/{id}', function (Request $request, Response $response
     $branchId = getActiveBranchId();
     
     // Update product catalog
-    $stmt = $pdo->prepare('UPDATE products SET name = ?, category_id = ?, cost_price = ?, selling_price = ?, min_stock = ?, barcode = ?, warranty = ? WHERE id = ?');
+    $stmt = $pdo->prepare('UPDATE products SET name = ?, arabic_name = ?, category_id = ?, cost_price = ?, selling_price = ?, min_stock = ?, barcode = ?, unit = ?, expiry_date = ? WHERE id = ?');
     $stmt->execute([
         $data['name'] ?? '', 
+        $data['arabic_name'] ?? '',
         $data['category_id'] ?? null, 
         $data['cost_price'] ?? 0, 
         $data['selling_price'] ?? 0, 
         $data['min_stock'] ?? 5,
         $data['barcode'] ?? '',
-        $data['warranty'] ?? '',
+        $data['unit'] ?? 'PCS',
+        !empty($data['expiry_date']) ? $data['expiry_date'] : null,
         $id
     ]);
     
@@ -1244,31 +1173,7 @@ $app->post('/products/delete/{id}', function (Request $request, Response $respon
     return $response->withHeader('Content-Type', 'application/json');
 })->add($roleMiddleware(['Admin']));
 
-$app->post('/repairs/edit/{id}', function (Request $request, Response $response, $args) use ($pdo) {
-    $id = $args['id'];
-    $data = (array)$request->getParsedBody();
-    $stmt = $pdo->prepare('UPDATE repair_logs SET customer_name = ?, phone = ?, category_id = ?, device_issue = ?, estimated_cost = ?, real_cost = ?, warranty = ?, status = ? WHERE id = ?');
-    $stmt->execute([
-        $data['customer_name'] ?? '',
-        $data['phone'] ?? '',
-        $data['category_id'] ?? null,
-        $data['device_issue'] ?? '',
-        $data['estimated_cost'] ?? 0,
-        $data['real_cost'] ?? 0,
-        $data['warranty'] ?? '',
-        $data['status'] ?? 'Pending',
-        $id
-    ]);
-    $response->getBody()->write(json_encode(['success' => true]));
-    return $response->withHeader('Content-Type', 'application/json');
-})->add($roleMiddleware(['Admin', 'Cashier']));
 
-$app->post('/repairs/delete/{id}', function (Request $request, Response $response, $args) use ($pdo) {
-    $stmt = $pdo->prepare('DELETE FROM repair_logs WHERE id = ?');
-    $stmt->execute([$args['id']]);
-    $response->getBody()->write(json_encode(['success' => true]));
-    return $response->withHeader('Content-Type', 'application/json');
-})->add($roleMiddleware(['Admin']));
 
 $app->post('/expenses/edit/{id}', function (Request $request, Response $response, $args) use ($pdo) {
     $id = $args['id'];
@@ -1361,19 +1266,6 @@ $app->post('/products/update-price/{id}', function (Request $request, Response $
     return $response->withHeader('Content-Type', 'application/json');
 })->add($roleMiddleware(['Admin', 'Stock Manager']));
 
-$app->post('/repairs/update-status/{id}', function (Request $request, Response $response, $args) use ($pdo) {
-    $id = $args['id'];
-    $data = (array)$request->getParsedBody();
-    $status = $data['status'] ?? '';
-    
-    if (in_array($status, ['Pending', 'In Progress', 'Completed'])) {
-        $stmt = $pdo->prepare('UPDATE repair_logs SET status = ? WHERE id = ?');
-        $stmt->execute([$status, $id]);
-    }
-
-    $response->getBody()->write(json_encode(['success' => true]));
-    return $response->withHeader('Content-Type', 'application/json');
-})->add($roleMiddleware(['Admin', 'Cashier']));
 
 // =====================================================
 // REPORTS (branch-aware)
@@ -1439,22 +1331,7 @@ $app->post('/api/reports', function (Request $request, Response $response, $args
     }
     $lowStock = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Repairs by Category
-    $rBranchFilter = $branchId ? ' AND r.branch_id = ?' : '';
-    $rBranchParams = $branchId ? [$branchId] : [];
-    
-    $stmt = $pdo->prepare("
-        SELECT c.name as category_name, 
-               COUNT(r.id) as count, 
-               SUM(COALESCE(NULLIF(r.actual_shop_cost,''), r.estimated_cost)) as revenue
-        FROM repair_logs r
-        LEFT JOIN repair_categories c ON r.category_id = c.id
-        WHERE r.status = 'Completed' AND r.created_at BETWEEN ? AND ?" . $rBranchFilter . "
-        GROUP BY r.category_id
-        ORDER BY revenue DESC
-    ");
-    $stmt->execute(array_merge([$startDate, $endDateFull], $rBranchParams));
-    $repairsByCategory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 
     // Shifts Report
     $shBranchFilter = $branchId ? ' AND sh.branch_id = ?' : '';
@@ -1482,17 +1359,11 @@ $app->post('/api/reports', function (Request $request, Response $response, $args
     $productsCogs = (float)$stmt->fetchColumn();
     $productsRevenue = (float)$salesData['revenue'];
     
-    $stmt = $pdo->prepare("SELECT SUM(COALESCE(NULLIF(actual_shop_cost,''), estimated_cost)) as rev, SUM(real_cost) as cost FROM repair_logs r WHERE status = 'Completed' AND created_at BETWEEN ? AND ?" . $rBranchFilter);
-    $stmt->execute(array_merge([$startDate, $endDateFull], $rBranchParams));
-    $repairsData = $stmt->fetch(PDO::FETCH_ASSOC);
-    $repairsRevenue = (float)$repairsData['rev'];
-    $repairsCogs = (float)$repairsData['cost'];
-
     $stmt = $pdo->prepare("SELECT SUM(amount) FROM expenses WHERE expense_date BETWEEN ? AND ?" . $branchFilter);
     $stmt->execute(array_merge([$startDate, $endDateFull], $branchParams));
     $expenses = (float)$stmt->fetchColumn();
 
-    $grossProfit = ($productsRevenue - $productsCogs) + ($repairsRevenue - $repairsCogs);
+    $grossProfit = $productsRevenue - $productsCogs;
     $netProfit = $grossProfit - $expenses;
 
     $result = [
@@ -1506,15 +1377,10 @@ $app->post('/api/reports', function (Request $request, Response $response, $args
             'stats' => $inventoryStats,
             'low_stock' => $lowStock
         ],
-        'repairs' => [
-            'by_category' => $repairsByCategory
-        ],
         'shifts' => $shiftsReport,
         'pl' => [
             'products_revenue' => $productsRevenue,
             'products_cogs' => $productsCogs,
-            'repairs_revenue' => $repairsRevenue,
-            'repairs_cogs' => $repairsCogs,
             'gross_profit' => $grossProfit,
             'expenses' => $expenses,
             'net_profit' => $netProfit
@@ -1536,4 +1402,354 @@ $app->get('/api/branches', function (Request $request, Response $response, $args
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+
+// =====================================================
+// GRN MODULE
+// =====================================================
+$app->get('/grn', function (Request $request, Response $response, $args) use ($pdo) {
+    $branchId = getActiveBranchId();
+    $view = Twig::fromRequest($request);
+    
+    if ($branchId) {
+        $stmt = $pdo->prepare('SELECT * FROM grns WHERE branch_id = ? ORDER BY date DESC');
+        $stmt->execute([$branchId]);
+    } else {
+        $stmt = $pdo->query('
+            SELECT g.*, b.name as branch_name 
+            FROM grns g 
+            LEFT JOIN branches b ON g.branch_id = b.id 
+            ORDER BY g.date DESC
+        ');
+    }
+    $grns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    return $view->render($response, 'grn.twig', [
+        'active_menu' => 'grn',
+        'grns' => $grns,
+        'needs_branch_selection' => !$branchId && $_SESSION['user']['role'] === 'Owner'
+    ]);
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+$app->get('/grn/add', function (Request $request, Response $response, $args) use ($pdo) {
+    $branchId = getActiveBranchId();
+    if (!$branchId) {
+        return $response->withHeader('Location', '/grn')->withStatus(302);
+    }
+    
+    $stmt = $pdo->query('
+        SELECT p.*, c.name as category_name
+        FROM products p 
+        LEFT JOIN categories c ON p.category_id = c.id
+        ORDER BY p.name ASC
+    ');
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $stmtSup = $pdo->query('SELECT id, name FROM suppliers ORDER BY name ASC');
+    $suppliers = $stmtSup->fetchAll(PDO::FETCH_ASSOC);
+    
+    $view = Twig::fromRequest($request);
+    return $view->render($response, 'grn_add.twig', [
+        'active_menu' => 'grn',
+        'products' => $products,
+        'suppliers' => $suppliers
+    ]);
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+$app->post('/grn/add', function (Request $request, Response $response, $args) use ($pdo) {
+    $data = (array)$request->getParsedBody();
+    $branchId = getActiveBranchId();
+    $supplierId = !empty($data['supplier_id']) ? (int)$data['supplier_id'] : null;
+    $supplierName = $data['supplier_name'] ?? '';
+    $notes = $data['notes'] ?? '';
+    $items = $data['items'] ?? [];
+    
+    if (empty($items)) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'No items added to GRN']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        $ref = 'GRN-' . time();
+        $total = 0;
+        
+        $stmtGrn = $pdo->prepare('INSERT INTO grns (reference_no, supplier_name, supplier_id, branch_id, notes, created_by) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmtGrn->execute([$ref, $supplierName, $supplierId, $branchId, $notes, $_SESSION['user']['id']]);
+        $grnId = $pdo->lastInsertId();
+        
+        $stmtItem = $pdo->prepare('INSERT INTO grn_items (grn_id, product_id, quantity, cost_price) VALUES (?, ?, ?, ?)');
+        $stmtStock = $pdo->prepare('UPDATE branch_stock SET stock_count = stock_count + ? WHERE product_id = ? AND branch_id = ?');
+        $stmtCost = $pdo->prepare('UPDATE products SET cost_price = ? WHERE id = ?');
+        
+        foreach ($items as $item) {
+            $qty = (float)$item['quantity'];
+            $cost = (float)$item['cost'];
+            $total += ($qty * $cost);
+            
+            $stmtItem->execute([$grnId, $item['id'], $qty, $cost]);
+            $stmtStock->execute([$qty, $item['id'], $branchId]);
+            $stmtCost->execute([$cost, $item['id']]);
+        }
+        
+        $pdo->prepare('UPDATE grns SET total_amount = ? WHERE id = ?')->execute([$total, $grnId]);
+        
+        $pdo->commit();
+        $response->getBody()->write(json_encode(['success' => true, 'grn_id' => $grnId]));
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $response->getBody()->write(json_encode(['success' => false, 'message' => $e->getMessage()]));
+    }
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+$app->get('/grn/view/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = $args['id'];
+    
+    $stmt = $pdo->prepare('SELECT * FROM grns WHERE id = ?');
+    $stmt->execute([$id]);
+    $grn = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($grn) {
+        $stmtItems = $pdo->prepare('
+            SELECT gi.*, p.name as product_name, p.unit 
+            FROM grn_items gi 
+            JOIN products p ON gi.product_id = p.id 
+            WHERE gi.grn_id = ?
+        ');
+        $stmtItems->execute([$id]);
+        $grn['items'] = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+        
+        $response->getBody()->write(json_encode(['success' => true, 'grn' => $grn]));
+    } else {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'GRN not found']));
+    }
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+// =====================================================
+// TRANSFERS MODULE
+// =====================================================
+$app->get('/transfers', function (Request $request, Response $response, $args) use ($pdo) {
+    $view = Twig::fromRequest($request);
+    
+    $stmt = $pdo->query('
+        SELECT t.*, b1.name as from_branch, b2.name as to_branch, u.username as creator
+        FROM stock_transfers t
+        JOIN branches b1 ON t.from_branch_id = b1.id
+        JOIN branches b2 ON t.to_branch_id = b2.id
+        LEFT JOIN users u ON t.created_by = u.id
+        ORDER BY t.date DESC
+    ');
+    $transfers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $stmtBranches = $pdo->query('SELECT * FROM branches ORDER BY name ASC');
+    $branches = $stmtBranches->fetchAll(PDO::FETCH_ASSOC);
+    
+    $stmtProducts = $pdo->query('SELECT id, name, unit FROM products ORDER BY name ASC');
+    $products = $stmtProducts->fetchAll(PDO::FETCH_ASSOC);
+    
+    return $view->render($response, 'transfers.twig', [
+        'active_menu' => 'transfers',
+        'transfers' => $transfers,
+        'branches' => $branches,
+        'products' => $products
+    ]);
+})->add($roleMiddleware(['Admin', 'Owner']));
+
+$app->post('/transfers/add', function (Request $request, Response $response, $args) use ($pdo) {
+    $data = (array)$request->getParsedBody();
+    $fromBranch = (int)($data['from_branch_id'] ?? 0);
+    $toBranch = (int)($data['to_branch_id'] ?? 0);
+    $notes = $data['notes'] ?? '';
+    $items = $data['items'] ?? [];
+    
+    if ($fromBranch === $toBranch) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Cannot transfer to the same branch']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    if (empty($items)) {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'No items added']));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // Verify stock
+        $stmtCheck = $pdo->prepare('SELECT stock_count FROM branch_stock WHERE product_id = ? AND branch_id = ?');
+        foreach ($items as $item) {
+            $stmtCheck->execute([$item['id'], $fromBranch]);
+            $currentStock = $stmtCheck->fetchColumn();
+            if ($currentStock === false || $currentStock < $item['quantity']) {
+                throw new Exception('Insufficient stock for product ID ' . $item['id']);
+            }
+        }
+        
+        $ref = 'TRF-' . time();
+        $stmtTrf = $pdo->prepare('INSERT INTO stock_transfers (reference_no, from_branch_id, to_branch_id, notes, created_by) VALUES (?, ?, ?, ?, ?)');
+        $stmtTrf->execute([$ref, $fromBranch, $toBranch, $notes, $_SESSION['user']['id']]);
+        $trfId = $pdo->lastInsertId();
+        
+        $stmtItem = $pdo->prepare('INSERT INTO stock_transfer_items (transfer_id, product_id, quantity) VALUES (?, ?, ?)');
+        $stmtDeduct = $pdo->prepare('UPDATE branch_stock SET stock_count = stock_count - ? WHERE product_id = ? AND branch_id = ?');
+        $stmtAdd = $pdo->prepare('UPDATE branch_stock SET stock_count = stock_count + ? WHERE product_id = ? AND branch_id = ?');
+        
+        foreach ($items as $item) {
+            $qty = (float)$item['quantity'];
+            $stmtItem->execute([$trfId, $item['id'], $qty]);
+            $stmtDeduct->execute([$qty, $item['id'], $fromBranch]);
+            
+            // Check if to_branch has branch_stock record, if not insert it
+            $stmtCheckTo = $pdo->prepare('SELECT id FROM branch_stock WHERE product_id = ? AND branch_id = ?');
+            $stmtCheckTo->execute([$item['id'], $toBranch]);
+            if (!$stmtCheckTo->fetch()) {
+                $pdo->prepare('INSERT INTO branch_stock (product_id, branch_id, stock_count) VALUES (?, ?, 0)')->execute([$item['id'], $toBranch]);
+            }
+            $stmtAdd->execute([$qty, $item['id'], $toBranch]);
+        }
+        
+        $pdo->commit();
+        $response->getBody()->write(json_encode(['success' => true]));
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $response->getBody()->write(json_encode(['success' => false, 'message' => $e->getMessage()]));
+    }
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner']));
+
+$app->get('/transfers/view/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = $args['id'];
+    
+    $stmt = $pdo->prepare('
+        SELECT t.*, b1.name as from_branch, b2.name as to_branch 
+        FROM stock_transfers t
+        JOIN branches b1 ON t.from_branch_id = b1.id
+        JOIN branches b2 ON t.to_branch_id = b2.id
+        WHERE t.id = ?
+    ');
+    $stmt->execute([$id]);
+    $trf = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($trf) {
+        $stmtItems = $pdo->prepare('
+            SELECT ti.*, p.name as product_name, p.unit 
+            FROM stock_transfer_items ti 
+            JOIN products p ON ti.product_id = p.id 
+            WHERE ti.transfer_id = ?
+        ');
+        $stmtItems->execute([$id]);
+        $trf['items'] = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+        
+        $response->getBody()->write(json_encode(['success' => true, 'transfer' => $trf]));
+    } else {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Transfer not found']));
+    }
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner']));
+
+
+// =====================================================
+// PEOPLE MODULE (Suppliers & Customers)
+// =====================================================
+
+// Suppliers
+$app->get('/suppliers', function (Request $request, Response $response, $args) use ($pdo) {
+    $stmt = $pdo->query('SELECT * FROM suppliers ORDER BY name ASC');
+    $suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $view = Twig::fromRequest($request);
+    return $view->render($response, 'suppliers.twig', [
+        'active_menu' => 'suppliers',
+        'suppliers' => $suppliers
+    ]);
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+$app->post('/suppliers/add', function (Request $request, Response $response, $args) use ($pdo) {
+    $data = (array)$request->getParsedBody();
+    $stmt = $pdo->prepare('INSERT INTO suppliers (name, phone, email, address) VALUES (?, ?, ?, ?)');
+    $stmt->execute([
+        $data['name'] ?? '',
+        $data['phone'] ?? '',
+        $data['email'] ?? '',
+        $data['address'] ?? ''
+    ]);
+    
+    $response->getBody()->write(json_encode(['success' => true]));
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+$app->post('/suppliers/edit/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = $args['id'];
+    $data = (array)$request->getParsedBody();
+    $stmt = $pdo->prepare('UPDATE suppliers SET name = ?, phone = ?, email = ?, address = ? WHERE id = ?');
+    $stmt->execute([
+        $data['name'] ?? '',
+        $data['phone'] ?? '',
+        $data['email'] ?? '',
+        $data['address'] ?? '',
+        $id
+    ]);
+    
+    $response->getBody()->write(json_encode(['success' => true]));
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager']));
+
+$app->post('/suppliers/delete/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $stmt = $pdo->prepare('DELETE FROM suppliers WHERE id = ?');
+    $stmt->execute([$args['id']]);
+    $response->getBody()->write(json_encode(['success' => true]));
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner']));
+
+// Customers
+$app->get('/customers', function (Request $request, Response $response, $args) use ($pdo) {
+    $stmt = $pdo->query('SELECT * FROM customers ORDER BY name ASC');
+    $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $view = Twig::fromRequest($request);
+    return $view->render($response, 'customers.twig', [
+        'active_menu' => 'customers',
+        'customers' => $customers
+    ]);
+})->add($roleMiddleware(['Admin', 'Owner', 'Cashier', 'Stock Manager']));
+
+$app->post('/customers/add', function (Request $request, Response $response, $args) use ($pdo) {
+    $data = (array)$request->getParsedBody();
+    $stmt = $pdo->prepare('INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)');
+    $stmt->execute([
+        $data['name'] ?? '',
+        $data['phone'] ?? '',
+        $data['email'] ?? '',
+        $data['address'] ?? ''
+    ]);
+    
+    $response->getBody()->write(json_encode(['success' => true]));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+$app->post('/customers/edit/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = $args['id'];
+    $data = (array)$request->getParsedBody();
+    $stmt = $pdo->prepare('UPDATE customers SET name = ?, phone = ?, email = ?, address = ? WHERE id = ?');
+    $stmt->execute([
+        $data['name'] ?? '',
+        $data['phone'] ?? '',
+        $data['email'] ?? '',
+        $data['address'] ?? '',
+        $id
+    ]);
+    
+    $response->getBody()->write(json_encode(['success' => true]));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+$app->post('/customers/delete/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $stmt = $pdo->prepare('DELETE FROM customers WHERE id = ?');
+    $stmt->execute([$args['id']]);
+    $response->getBody()->write(json_encode(['success' => true]));
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Owner']));
+
 $app->run();
+

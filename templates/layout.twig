@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Global Smart{% endblock %}</title>
+    <title>{% block title %}MT POS and ERP{% endblock %}</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -130,12 +130,12 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transform -translate-x-full transition-transform duration-300 {% block sidebar_desktop_class %}md:relative md:translate-x-0{% endblock %}">
         <div class="h-16 flex flex-col justify-center px-6 border-b border-slate-200">
-            <h1 class="text-lg font-bold text-slate-900 leading-tight">Global Smart</h1>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">MT POS and ERP</h1>
             <span class="text-xs font-medium text-slate-500">
                 {% if current_user.role == 'Owner' %}
                     Multi-Branch POS
                 {% else %}
-                    GST ERP & POS
+                    Muneefa Trading
                 {% endif %}
             </span>
         </div>
@@ -162,15 +162,45 @@
                 Inventory
             </a>
             
+            <div class="pt-4 mt-4 border-t border-slate-100">
+                <span class="px-3 text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 block">People</span>
+                
+                <a href="/customers" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'customers' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    Customers
+                </a>
+                
+                {% if current_user.role in ['Admin', 'Owner', 'Stock Manager'] %}
+                <a href="/suppliers" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'suppliers' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                    <i data-lucide="truck" class="w-5 h-5"></i>
+                    Suppliers
+                </a>
+                {% endif %}
+            </div>
+            
+            <div class="pt-4 mt-4 border-t border-slate-100">
+                <span class="px-3 text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 block">Operations</span>
+            
+                {% if current_user.role in ['Admin', 'Stock Manager', 'Owner'] %}
+                <a href="/grn" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'grn' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                    <i data-lucide="package-plus" class="w-5 h-5"></i>
+                    Purchases / GRN
+                </a>
+                {% endif %}
+            
+            {% if current_user.role in ['Admin', 'Owner'] %}
+            <a href="/transfers" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'transfers' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="arrow-right-left" class="w-5 h-5"></i>
+                Stock Transfers
+            </a>
+            {% endif %}
+            
             {% if current_user.role in ['Admin', 'Cashier', 'Owner'] %}
             <a href="/pos" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'pos' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
                 <i data-lucide="shopping-cart" class="w-5 h-5"></i>
                 POS Terminal
             </a>
-            <a href="/repairs" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'repairs' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
-                <i data-lucide="wrench" class="w-5 h-5"></i>
-                Repairs
-            </a>
+            
             {% endif %}
             
             {% if current_user.role in ['Admin', 'Stock Manager', 'Owner'] %}
@@ -226,8 +256,8 @@
             <div class="flex items-center gap-4">
                 {% block header_actions %}{% endblock %}
 
-                {% if current_user.role == 'Owner' %}
-                <!-- Branch Switcher for Owner -->
+                {% if current_user.role in ['Owner', 'Admin'] %}
+                <!-- Branch Switcher for Owner & Admin -->
                 <div class="branch-dropdown" id="branchDropdown">
                     <button onclick="toggleBranchDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-sm font-medium text-slate-700">
                         <i data-lucide="building-2" class="w-4 h-4 text-indigo-600"></i>

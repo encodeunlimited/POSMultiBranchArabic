@@ -1,25 +1,25 @@
 <?php
-// host-index.php
+/**
+ * Hostinger Production Entry Point
+ * This file replaces public/index.php on the production server.
+ * It defines the absolute path to the SQLite database (outside the phar)
+ * and then executes the compiled pos.phar application.
+ */
+
+// Enable error reporting for initial setup
 ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Check for production database name
-$dbFile = dirname(__DIR__) . '/live_database.sqlite';
-if (!file_exists($dbFile)) {
-    $dbFile = dirname(__DIR__) . '/database.sqlite';
+// Define absolute path to database in Hostinger (relative to public_html)
+// Hostinger typically places public_html inside the domain directory.
+// We'll store the database one level above public_html to keep it secure.
+define('DB_PATH', dirname(__DIR__) . '/database.sqlite');
+define('TWIG_CACHE_PATH', dirname(__DIR__) . '/twig_cache');
+
+// Ensure Twig cache directory exists
+if (!is_dir(TWIG_CACHE_PATH)) {
+    @mkdir(TWIG_CACHE_PATH, 0755, true);
 }
 
-// Define the real path to the production database outside the PHAR
-define('DB_PATH', $dbFile);
-
-// Determine the absolute path to the phar file
-$pharPath = dirname(__DIR__) . '/app.phar';
-
-if (file_exists($pharPath)) {
-    // Include the phar archive which will execute its stub (public/index.php)
-    require $pharPath;
-} else {
-    http_response_code(500);
-    echo "Application archive (app.phar) not found.";
-}
+// Require the compiled phar
+require __DIR__ . '/pos.phar';

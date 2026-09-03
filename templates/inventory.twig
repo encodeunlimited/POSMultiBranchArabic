@@ -1,6 +1,6 @@
 {% extends "layout.twig" %}
 
-{% block title %}Inventory | Global Smart{% endblock %}
+{% block title %}Inventory | MT POS and ERP{% endblock %}
 {% block header_title %}Inventory Management{% endblock %}
 
 {% block content %}
@@ -13,6 +13,10 @@
         <button onclick="openModal('manageCategoriesModal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors shadow-sm text-sm">
             <i data-lucide="folder-plus" class="w-4 h-4"></i>
             Manage Categories
+        </button>
+        <button onclick="openModal('manageUnitsModal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors shadow-sm text-sm">
+            <i data-lucide="ruler" class="w-4 h-4"></i>
+            Manage Units
         </button>
         <button onclick="openModal('addProductModal')" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 transition-colors shadow-sm text-sm">
             <i data-lucide="plus" class="w-4 h-4"></i>
@@ -54,8 +58,9 @@
                         <th class="px-6 py-4">Cost Price</th>
                         {% endif %}
                         <th class="px-6 py-4">Selling Price</th>
-                        <th class="px-6 py-4">Warranty</th>
+                        <th class="px-6 py-4">Unit</th>
                         <th class="px-6 py-4">Stock</th>
+                        <th class="px-6 py-4">Expiry</th>
                         {% if current_user.role != 'Cashier' %}
                         <th class="px-6 py-4">Actions</th>
                         {% endif %}
@@ -65,7 +70,12 @@
                     {% for product in products %}
                     <tr class="hover:bg-slate-50/50 transition-colors">
                         <td class="px-6 py-4 font-medium text-slate-900">#{{ product.id }}</td>
-                        <td class="px-6 py-4 text-slate-800">{{ product.name }}</td>
+                        <td class="px-6 py-4 text-slate-800">
+                            <div>{{ product.name }}</div>
+                            {% if product.arabic_name %}
+                            <div class="text-xs text-slate-500 font-arabic mt-0.5" dir="rtl">{{ product.arabic_name }}</div>
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-4">
                             <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">{{ product.category_name }}</span>
                         </td>
@@ -73,7 +83,7 @@
                         <td class="px-6 py-4">QAR {{ product.cost_price|number_format(2) }}</td>
                         {% endif %}
                         <td class="px-6 py-4 font-medium text-slate-900">QAR {{ product.selling_price|number_format(2) }}</td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">{{ product.warranty|default('-') }}</td>
+                        <td class="px-6 py-4 text-slate-500 text-xs">{{ product.unit|default('PCS') }}</td>
                         <td class="px-6 py-4">
                             {% set bstock = product.branch_stock|default(0) %}
                             {% set bmin = product.branch_min_stock|default(5) %}
@@ -83,6 +93,18 @@
                                 </span>
                             {% else %}
                                 <span class="text-emerald-600 font-bold">{{ bstock }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if product.expiry_date %}
+                                {% set today = "now"|date("Y-m-d") %}
+                                {% if product.expiry_date < today %}
+                                    <span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-md text-xs font-bold whitespace-nowrap">Expired: {{ product.expiry_date }}</span>
+                                {% else %}
+                                    <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium whitespace-nowrap">{{ product.expiry_date }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-slate-400 text-xs">-</span>
                             {% endif %}
                         </td>
                         {% if current_user.role != 'Cashier' %}
@@ -116,6 +138,49 @@
 
 <!-- Modal Templates -->
 
+<template id="manageUnitsModal">
+    <div class="flex flex-col h-full max-h-[80vh]">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900">Manage Units</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+            <form onsubmit="event.preventDefault(); submitForm(this, '/unit/add')" class="flex flex-col gap-3">
+                <div class="flex gap-3">
+                    <input type="text" name="name" placeholder="New Unit Name (e.g. PCS)..." required class="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors">
+                        Add
+                    </button>
+                </div>
+                <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
+                    <input type="checkbox" name="allow_fractional" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                    <span>Allow Decimal/Fractional Quantities (e.g., 1.5 KG)</span>
+                </label>
+            </form>
+        </div>
+        <div class="p-6 space-y-2 overflow-y-auto">
+            {% for unit in units %}
+            <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                <div>
+                    <span class="font-medium text-slate-800">{{ unit.name }}</span>
+                    {% if unit.allow_fractional %}
+                    <span class="ml-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">Fractional</span>
+                    {% endif %}
+                </div>
+                <button onclick="deleteUnit({{ unit.id }})" class="text-rose-500 hover:text-rose-700 transition-colors p-2 hover:bg-rose-50 rounded-lg">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+            {% else %}
+                <p class="text-center text-slate-500 text-sm py-4">No units found.</p>
+            {% endfor %}
+        </div>
+    </div>
+</template>
+
+
 <template id="addProductModal">
     <div class="flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -146,9 +211,19 @@
                 </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Warranty (Optional)</label>
-                <input type="text" name="warranty" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="e.g. 1 Year, 6 Months">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Arabic Name (Optional)</label>
+                    <input type="text" name="arabic_name" dir="rtl" placeholder="الاسم بالعربي" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Unit</label>
+                                        <select name="unit" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
+                        {% for unit in units %}
+                            <option value="{{ unit.name }}">{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -162,6 +237,7 @@
                 </div>
             </div>
 
+
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Initial Stock Count</label>
@@ -172,6 +248,12 @@
                     <input type="number" name="min_stock" required value="5" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                 </div>
             </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Expiry Date (Optional)</label>
+                <input type="date" name="expiry_date" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-slate-700">
+            </div>
+
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
                 <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
@@ -245,9 +327,19 @@
                 </div>
             </div>
             
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Warranty (Optional)</label>
-                <input type="text" name="warranty" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="e.g. 1 Year, 6 Months">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Arabic Name (Optional)</label>
+                    <input type="text" name="arabic_name" dir="rtl" placeholder="الاسم بالعربي" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Unit</label>
+                                        <select name="unit" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
+                        {% for unit in units %}
+                            <option value="{{ unit.name }}">{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -266,6 +358,10 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Min Stock Alert</label>
                     <input type="number" name="min_stock" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Expiry Date (Optional)</label>
+                    <input type="date" name="expiry_date" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-slate-700">
                 </div>
             </div>
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
@@ -366,7 +462,7 @@
             <h4 id="barcode-product-name" class="font-bold text-slate-800 text-center"></h4>
             
             <div id="barcode-wrapper" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center min-h-[150px] w-full max-w-sm">
-                <div class="print-text print-shop-name hidden">Global Smart</div>
+                <div class="print-text print-shop-name hidden">Muneefa Trading</div>
                 <div id="barcode-print-product-name" class="print-text hidden"></div>
                 <div id="barcode-print-product-price" class="print-text hidden" style="font-size: 10px; margin-top: 2px;"></div>
                 <!-- SVG barcode goes here -->

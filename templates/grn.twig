@@ -1,0 +1,214 @@
+{% extends "layout.twig" %}
+
+{% block content %}
+<div class="p-6 max-w-7xl mx-auto">
+    
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <i data-lucide="package-plus" class="w-8 h-8 text-indigo-600"></i>
+                Goods Received Notes
+            </h1>
+            <p class="text-slate-500 text-sm mt-1">Manage purchase receipts and supplier deliveries.</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="grnSearch" placeholder="Search GRN..." class="pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-64 transition-all bg-white">
+            </div>
+            
+            {% if not needs_branch_selection %}
+            <a href="/grn/add" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-200">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+                New GRN
+            </a>
+            {% else %}
+            <button disabled class="bg-slate-300 text-slate-500 px-4 py-2 rounded-xl font-bold flex items-center gap-2 cursor-not-allowed" title="Select a branch from the top menu first">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+                New GRN
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if needs_branch_selection %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex gap-3 items-start">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+        <div>
+            <h3 class="font-bold text-amber-800">Branch Required</h3>
+            <p class="text-amber-700 text-sm mt-1">You are currently viewing all GRNs globally. To create a new GRN, please select a specific branch from the dropdown menu in the top right corner.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left" id="grnTable">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
+                    <tr>
+                        <th class="px-6 py-4">Reference No</th>
+                        {% if needs_branch_selection %}
+                        <th class="px-6 py-4">Branch</th>
+                        {% endif %}
+                        <th class="px-6 py-4">Date</th>
+                        <th class="px-6 py-4">Supplier</th>
+                        <th class="px-6 py-4">Total Amount (QAR)</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for grn in grns %}
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-slate-900">{{ grn.reference_no }}</td>
+                        {% if needs_branch_selection %}
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
+                                <i data-lucide="store" class="w-3 h-3 mr-1"></i> {{ grn.branch_name }}
+                            </span>
+                        </td>
+                        {% endif %}
+                        <td class="px-6 py-4 text-slate-500">{{ grn.date|date("Y-m-d h:i A") }}</td>
+                        <td class="px-6 py-4 text-slate-800">{{ grn.supplier_name }}</td>
+                        <td class="px-6 py-4 font-bold text-slate-900">QAR {{ grn.total_amount|number_format(2) }}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="viewGrn({{ grn.id }})" class="text-indigo-600 hover:text-indigo-900 font-medium bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5">
+                                <i data-lucide="eye" class="w-4 h-4"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            <i data-lucide="package-x" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
+                            <p class="text-lg font-medium text-slate-900 mb-1">No GRNs Found</p>
+                            <p class="text-sm">There are no Goods Received Notes recorded yet.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+            <span class="text-sm text-slate-500">Showing <span id="grnCount" class="font-bold text-slate-900">{{ grns|length }}</span> records</span>
+        </div>
+    </div>
+</div>
+
+<!-- View GRN Modal -->
+<div id="grnModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5 text-indigo-600"></i>
+                    GRN Details
+                </h3>
+                <p id="grnRef" class="text-xs font-bold text-slate-500 mt-0.5">Reference: </p>
+            </div>
+            <button onclick="closeGrnModal()" class="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-200 rounded-lg">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto">
+            <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="block text-slate-500 text-xs font-medium mb-1">Supplier</span>
+                    <span id="grnSupplier" class="font-bold text-slate-900"></span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="block text-slate-500 text-xs font-medium mb-1">Date</span>
+                    <span id="grnDate" class="font-bold text-slate-900"></span>
+                </div>
+            </div>
+            
+            <div class="mb-2 text-sm font-bold text-slate-900">Received Items</div>
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-200">
+                        <tr>
+                            <th class="px-4 py-3">Product</th>
+                            <th class="px-4 py-3 text-center">Unit</th>
+                            <th class="px-4 py-3 text-center">Qty</th>
+                            <th class="px-4 py-3 text-right">Cost (QAR)</th>
+                            <th class="px-4 py-3 text-right">Total (QAR)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="grnItemsList" class="divide-y divide-slate-100">
+                        <!-- Filled by JS -->
+                    </tbody>
+                    <tfoot class="bg-slate-50 border-t border-slate-200">
+                        <tr>
+                            <td colspan="4" class="px-4 py-3 text-right font-bold text-slate-700">Total Amount</td>
+                            <td id="grnTotalAmount" class="px-4 py-3 text-right font-black text-indigo-700">0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div id="grnNotesContainer" class="mt-4 hidden">
+                <div class="text-xs font-bold text-slate-500 mb-1">Notes</div>
+                <div id="grnNotes" class="text-sm text-slate-700 bg-amber-50 p-3 rounded-xl border border-amber-100"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        new TailwindDataTable('grnTable', 'grnSearch', 'grnCount');
+    });
+
+    async function viewGrn(id) {
+        try {
+            const res = await fetch('/grn/view/' + id);
+            const data = await res.json();
+            
+            if (data.success) {
+                const grn = data.grn;
+                document.getElementById('grnRef').innerText = 'Reference: ' + grn.reference_no;
+                document.getElementById('grnSupplier').innerText = grn.supplier_name || 'N/A';
+                document.getElementById('grnDate').innerText = grn.date;
+                
+                if (grn.notes) {
+                    document.getElementById('grnNotesContainer').classList.remove('hidden');
+                    document.getElementById('grnNotes').innerText = grn.notes;
+                } else {
+                    document.getElementById('grnNotesContainer').classList.add('hidden');
+                }
+                
+                const tbody = document.getElementById('grnItemsList');
+                tbody.innerHTML = '';
+                
+                grn.items.forEach(item => {
+                    const rowTotal = (item.quantity * item.cost_price).toFixed(2);
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 font-medium text-slate-900">${item.product_name}</td>
+                            <td class="px-4 py-3 text-center text-slate-500">${item.unit || 'PCS'}</td>
+                            <td class="px-4 py-3 text-center font-bold">${item.quantity}</td>
+                            <td class="px-4 py-3 text-right">${Number(item.cost_price).toFixed(2)}</td>
+                            <td class="px-4 py-3 text-right font-medium">${rowTotal}</td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('grnTotalAmount').innerText = Number(grn.total_amount).toFixed(2);
+                
+                document.getElementById('grnModal').classList.remove('hidden');
+                document.getElementById('grnModal').classList.add('flex');
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (e) {
+            showToast('Failed to load GRN details', 'error');
+        }
+    }
+
+    function closeGrnModal() {
+        document.getElementById('grnModal').classList.add('hidden');
+        document.getElementById('grnModal').classList.remove('flex');
+    }
+</script>
+{% endblock %}

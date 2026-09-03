@@ -1,6 +1,6 @@
 {% extends "layout.twig" %}
 
-{% block title %}Dashboard | Global Smart{% endblock %}
+{% block title %}Dashboard | MT POS and ERP{% endblock %}
 {% block header_title %}Business Overview{% endblock %}
 
 {% block content %}
@@ -36,7 +36,7 @@
             <div>
                 <p class="text-xs font-bold tracking-wider text-blue-100 mb-1 uppercase">Period Revenue</p>
                 <h2 class="text-3xl font-black mb-2">QAR {{ stats.total_revenue|number_format(0) }}</h2>
-                <p class="text-[10px] text-blue-200 font-medium">Products: QAR {{ stats.products_revenue|number_format(0) }} | Repairs: QAR {{ stats.repairs_revenue|number_format(0) }}</p>
+                <p class="text-[10px] text-blue-200 font-medium">Total: QAR {{ stats.total_revenue|number_format(0) }}</p>
             </div>
             <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                 <i data-lucide="bar-chart-2" class="w-5 h-5 text-white"></i>
@@ -291,17 +291,7 @@
             </a>
             {% endif %}
 
-                {% if current_user.role == 'Admin' %}
-            <a href="/repairs#addRepairModal" class="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/50 transition-all group block">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center group-hover:bg-amber-500 transition-colors">
-                        <i data-lucide="wrench" class="w-5 h-5 text-amber-600 group-hover:text-white transition-colors"></i>
-                    </div>
-                    <span class="font-bold text-slate-700 group-hover:text-amber-900">Log Repair</span>
-                </div>
-                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-amber-500"></i>
-            </a>
-            {% endif %}
+
             </div>
         </div>
 
@@ -428,10 +418,7 @@
                 <span class="text-sm font-bold text-indigo-800">Products Revenue</span>
                 <span class="text-sm font-black text-indigo-900">QAR {{ stats.products_revenue|number_format(0) }}</span>
             </div>
-            <div class="flex justify-between items-center px-6 py-4 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
-                <span class="text-sm font-bold text-indigo-800">Repairs Revenue</span>
-                <span class="text-sm font-black text-indigo-900">QAR {{ stats.repairs_revenue|number_format(0) }}</span>
-            </div>
+
             
             <div class="border-t border-dashed border-slate-200 my-4"></div>
             
