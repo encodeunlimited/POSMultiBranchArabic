@@ -3,7 +3,7 @@ name: Deploy via FTP (Strict PHAR)
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
@@ -50,7 +50,7 @@ jobs:
           username: u600962660.mobileadmin
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy_package/
-          server-dir: /public_html/
+          server-dir: ./
           exclude: |
             **/.git*
             **/.git*/**
