@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Global Smart{% endblock %}</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Tom Select (for searchable dropdowns) -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    
+    <!-- JsBarcode for barcode generation -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+    <style>
+        .ts-wrapper {
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+        .ts-control {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 0.75rem !important; /* rounded-xl */
+            padding: 0.625rem 1rem !important; /* py-2.5 */
+            box-shadow: none !important;
+            font-size: 0.875rem !important;
+            color: #0f172a !important;
+            background: #ffffff !important;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+        }
+        .ts-control > input {
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+        .ts-control > input:focus {
+            outline: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+        .ts-control.focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+        }
+        .ts-dropdown {
+            border-radius: 0.75rem !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+            font-size: 0.875rem !important;
+            margin-top: 4px;
+            z-index: 50 !important;
+        }
+        .ts-dropdown .option {
+            padding: 0.5rem 1rem;
+        }
+        .ts-dropdown .option.active {
+            background-color: #e0e7ff !important;
+            color: #4338ca !important;
+        }
+        .ts-wrapper.single .ts-control:after {
+            border-color: #94a3b8 transparent transparent transparent;
+            border-width: 5px 5px 0 5px;
+            right: 15px;
+        }
+
+        /* Branch selector dropdown */
+        .branch-dropdown {
+            position: relative;
+        }
+        .branch-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            min-width: 220px;
+            z-index: 60;
+            overflow: hidden;
+        }
+        .branch-dropdown.open .branch-dropdown-menu {
+            display: block;
+            animation: slideDown 0.15s ease-out;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <!-- Custom JS -->
+    <script src="/js/app.js?v={{ 'now'|date('U') }}" defer></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex overflow-hidden">
+    
+    <!-- Sidebar Backdrop for Mobile/POS -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-30 hidden {% block backdrop_class %}md:hidden{% endblock %} backdrop-blur-sm transition-opacity"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transform -translate-x-full transition-transform duration-300 {% block sidebar_desktop_class %}md:relative md:translate-x-0{% endblock %}">
+        <div class="h-16 flex flex-col justify-center px-6 border-b border-slate-200">
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">Global Smart</h1>
+            <span class="text-xs font-medium text-slate-500">
+                {% if current_user.role == 'Owner' %}
+                    Multi-Branch POS
+                {% else %}
+                    GST ERP & POS
+                {% endif %}
+            </span>
+        </div>
+
+        {% if current_user.role != 'Owner' and current_user.branch_id %}
+        <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-100">
+            <div class="flex items-center gap-2">
+                <i data-lucide="building-2" class="w-4 h-4 text-indigo-600"></i>
+                <span class="text-xs font-bold text-indigo-700 uppercase tracking-wider">{{ active_branch_name }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+            {% if current_user.role in ['Admin', 'Cashier', 'Stock Manager', 'Owner'] %}
+            <a href="/" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'dashboard' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                Dashboard
+            </a>
+            {% endif %}
+            
+            <a href="/inventory" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'inventory' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="package" class="w-5 h-5"></i>
+                Inventory
+            </a>
+            
+            {% if current_user.role in ['Admin', 'Cashier', 'Owner'] %}
+            <a href="/pos" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'pos' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                POS Terminal
+            </a>
+            <a href="/repairs" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'repairs' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="wrench" class="w-5 h-5"></i>
+                Repairs
+            </a>
+            {% endif %}
+            
+            {% if current_user.role in ['Admin', 'Stock Manager', 'Owner'] %}
+            <a href="/sales" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'sales' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                Sales History
+            </a>
+            <a href="/expenses" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'expenses' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+                Expenses
+            </a>
+            {% endif %}
+            
+            {% if current_user.role in ['Admin', 'Owner'] %}
+            <a href="/reports" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'reports' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                Reports
+            </a>
+            <a href="/settings" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors {% if active_menu == 'settings' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                Settings
+            </a>
+            {% endif %}
+        </nav>
+        <div class="p-4 border-t border-slate-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full {% if current_user.role == 'Owner' %}bg-amber-100 text-amber-700{% else %}bg-indigo-100 text-indigo-700{% endif %} flex items-center justify-center font-bold">
+                        {{ current_user.username|first|upper }}
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-900">{{ current_user.username|capitalize }}</p>
+                        <p class="text-[10px] uppercase font-bold {% if current_user.role == 'Owner' %}text-amber-600{% else %}text-slate-500{% endif %} tracking-wider">{{ current_user.role }}</p>
+                    </div>
+                </div>
+                <a href="/logout" class="text-slate-400 hover:text-rose-600 transition-colors p-2" title="Logout">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        <!-- Topbar -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="{% block hamburger_class %}md:hidden{% endblock %} text-slate-500 hover:text-slate-700">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <h2 class="text-xl font-semibold text-slate-800">{% block header_title %}Overview{% endblock %}</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                {% block header_actions %}{% endblock %}
+
+                {% if current_user.role == 'Owner' %}
+                <!-- Branch Switcher for Owner -->
+                <div class="branch-dropdown" id="branchDropdown">
+                    <button onclick="toggleBranchDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-sm font-medium text-slate-700">
+                        <i data-lucide="building-2" class="w-4 h-4 text-indigo-600"></i>
+                        <span id="currentBranchLabel">{{ active_branch_name }}</span>
+                        <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+                    </button>
+                    <div class="branch-dropdown-menu">
+                        <div class="p-2 border-b border-slate-100">
+                            <p class="px-3 py-1 text-[10px] font-bold uppercase text-slate-400 tracking-wider">Switch Branch</p>
+                        </div>
+                        <div class="p-1">
+                            <button onclick="switchBranch('all')" class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2 {% if not active_branch_id %}font-bold text-indigo-700 bg-indigo-50{% else %}text-slate-600{% endif %}">
+                                <i data-lucide="globe" class="w-4 h-4"></i> All Branches
+                            </button>
+                            {% for branch in all_branches %}
+                            <button onclick="switchBranch({{ branch.id }})" class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2 {% if active_branch_id == branch.id %}font-bold text-indigo-700 bg-indigo-50{% else %}text-slate-600{% endif %}">
+                                <i data-lucide="building-2" class="w-4 h-4"></i> {{ branch.name }}
+                                <span class="text-[10px] text-slate-400 font-mono ml-auto">{{ branch.code }}</span>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <button class="text-slate-500 hover:text-slate-700 hidden">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-auto p-4 md:p-6">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Global Modal Overlay -->
+    <div id="global-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden relative z-10" id="modal-content-container">
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- System Confirm Modal -->
+    <div id="system-confirm-modal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden relative z-10 p-6 transform transition-all">
+                <div class="flex items-center gap-3 mb-3 text-amber-500">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                    <h3 class="text-lg font-bold text-slate-900" id="confirm-title">Confirmation Required</h3>
+                </div>
+                <p class="text-sm text-slate-600 mb-6" id="confirm-message">Are you sure you want to proceed?</p>
+                <div class="flex justify-end gap-3">
+                    <button id="confirm-btn-cancel" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
+                    <button id="confirm-btn-ok" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        // Branch Dropdown Toggle
+        function toggleBranchDropdown() {
+            const dropdown = document.getElementById('branchDropdown');
+            dropdown.classList.toggle('open');
+        }
+        
+        // Close dropdown on outside click
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('branchDropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+        
+        // Switch Branch
+        async function switchBranch(branchId) {
+            try {
+                const formData = new FormData();
+                formData.append('branch_id', branchId);
+                
+                const response = await fetch('/api/switch-branch', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.reload();
+                }
+            } catch (error) {
+                console.error('Failed to switch branch:', error);
+            }
+        }
+    </script>
+</body>
+</html>

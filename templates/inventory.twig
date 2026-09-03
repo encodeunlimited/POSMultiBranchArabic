@@ -1,0 +1,394 @@
+{% extends "layout.twig" %}
+
+{% block title %}Inventory | Global Smart{% endblock %}
+{% block header_title %}Inventory Management{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+    <div>
+        <p class="text-slate-500 text-sm">Track and manage store items and categories.</p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+        {% if current_user.role != 'Cashier' %}
+        <button onclick="openModal('manageCategoriesModal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors shadow-sm text-sm">
+            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+            Manage Categories
+        </button>
+        <button onclick="openModal('addProductModal')" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 transition-colors shadow-sm text-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add Product
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/30">
+        <div class="flex flex-col sm:flex-row gap-4 w-full md:flex-1 md:max-w-xl">
+            <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+                </div>
+                <input type="text" id="inventorySearch" placeholder="Search products..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+            </div>
+        </div>
+        <div class="w-full md:w-auto px-4 py-2 border border-slate-200 rounded-lg bg-white flex items-center justify-center md:justify-start gap-2 text-sm text-slate-600 font-medium">
+            <i data-lucide="package" class="w-4 h-4 text-indigo-500"></i>
+            <span id="inventoryCount">Records: {{ products|length }}</span>
+        </div>
+    </div>
+    {% if products is empty %}
+        <div class="p-12 flex flex-col items-center justify-center text-center">
+            <i data-lucide="package-open" class="w-12 h-12 text-slate-300 mb-4"></i>
+            <p class="text-slate-500 font-medium">No products recorded yet. Click "Add Product" to start tracking.</p>
+        </div>
+    {% else %}
+        <div class="overflow-x-auto">
+            <table id="inventoryTable" class="w-full text-left text-sm text-slate-600">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
+                    <tr>
+                        <th class="px-6 py-4">ID</th>
+                        <th class="px-6 py-4">Product Name</th>
+                        <th class="px-6 py-4">Category</th>
+                        {% if current_user.role != 'Cashier' %}
+                        <th class="px-6 py-4">Cost Price</th>
+                        {% endif %}
+                        <th class="px-6 py-4">Selling Price</th>
+                        <th class="px-6 py-4">Warranty</th>
+                        <th class="px-6 py-4">Stock</th>
+                        {% if current_user.role != 'Cashier' %}
+                        <th class="px-6 py-4">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for product in products %}
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-slate-900">#{{ product.id }}</td>
+                        <td class="px-6 py-4 text-slate-800">{{ product.name }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">{{ product.category_name }}</span>
+                        </td>
+                        {% if current_user.role != 'Cashier' %}
+                        <td class="px-6 py-4">QAR {{ product.cost_price|number_format(2) }}</td>
+                        {% endif %}
+                        <td class="px-6 py-4 font-medium text-slate-900">QAR {{ product.selling_price|number_format(2) }}</td>
+                        <td class="px-6 py-4 text-slate-500 text-xs">{{ product.warranty|default('-') }}</td>
+                        <td class="px-6 py-4">
+                            {% set bstock = product.branch_stock|default(0) %}
+                            {% set bmin = product.branch_min_stock|default(5) %}
+                            {% if bstock <= bmin %}
+                                <span class="text-rose-600 font-bold flex items-center gap-1">
+                                    <i data-lucide="alert-circle" class="w-4 h-4"></i> {{ bstock }}
+                                </span>
+                            {% else %}
+                                <span class="text-emerald-600 font-bold">{{ bstock }}</span>
+                            {% endif %}
+                        </td>
+                        {% if current_user.role != 'Cashier' %}
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex items-center justify-end gap-2">
+                                <button onclick="editItem(this, 'addStockModal', '/products/add-stock/{{ product.id }}')" data-item="{{ product|json_encode|e('html_attr') }}" class="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Add Stock">
+                                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="editItem(this, 'updatePriceModal', '/products/update-price/{{ product.id }}')" data-item="{{ product|json_encode|e('html_attr') }}" class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Update Price">
+                                    <i data-lucide="tag" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="editItem(this, 'editProductModal', '/products/edit/{{ product.id }}')" data-item="{{ product|json_encode|e('html_attr') }}" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Edit Product">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="openPrintBarcodeModal({{ product.id }}, '{{ product.barcode|default('') }}', '{{ product.name|escape('js') }}', {{ product.selling_price|default(0) }})" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Print Barcode">
+                                    <i data-lucide="printer" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteItem('/products/delete/{{ product.id }}', 'product')" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal Templates -->
+
+<template id="addProductModal">
+    <div class="flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900">Add New Product</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form onsubmit="event.preventDefault(); submitForm(this, '/inventory/add')" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                <input type="text" name="name" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                    <select name="category_id" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Barcode (Optional)</label>
+                    <input type="text" name="barcode" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Leave empty to auto-generate">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Warranty (Optional)</label>
+                <input type="text" name="warranty" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="e.g. 1 Year, 6 Months">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Cost Price (QAR)</label>
+                    <input type="number" step="0.01" name="cost_price" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Selling Price (QAR)</label>
+                    <input type="number" step="0.01" name="selling_price" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Initial Stock Count</label>
+                    <input type="number" name="stock_count" required value="0" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Min Stock Alert</label>
+                    <input type="number" name="min_stock" required value="5" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors flex items-center">
+                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> Save Product
+                </button>
+            </div>
+        </form>
+    </div>
+</template>
+
+<template id="manageCategoriesModal">
+    <div class="flex flex-col h-full max-h-[80vh]">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900">Manage Categories</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+            <form onsubmit="event.preventDefault(); submitForm(this, '/category/add')" class="flex gap-3">
+                <input type="text" name="name" placeholder="New Category Name..." required class="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                <button type="submit" class="px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors">
+                    Add
+                </button>
+            </form>
+        </div>
+        <div class="p-6 space-y-2 overflow-y-auto">
+            {% for category in categories %}
+            <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                <span class="font-medium text-slate-800">{{ category.name }}</span>
+                <button onclick="deleteCategory({{ category.id }})" class="text-rose-500 hover:text-rose-700 transition-colors p-2 hover:bg-rose-50 rounded-lg">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+            {% else %}
+                <p class="text-center text-slate-500 text-sm py-4">No categories found.</p>
+            {% endfor %}
+        </div>
+    </div>
+</template>
+
+<template id="editProductModal">
+    <div class="flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900">Edit Product</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                <input type="text" name="name" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Barcode</label>
+                    <input type="text" name="barcode" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                    <select name="category_id" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white">
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Warranty (Optional)</label>
+                <input type="text" name="warranty" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="e.g. 1 Year, 6 Months">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Cost Price (QAR)</label>
+                    <input type="number" step="0.01" name="cost_price" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Selling Price (QAR)</label>
+                    <input type="number" step="0.01" name="selling_price" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Stock Count</label>
+                    <input type="number" name="stock_count" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Min Stock Alert</label>
+                    <input type="number" name="min_stock" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</template>
+
+<template id="addStockModal">
+    <div class="flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900">Add Stock</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                <input type="text" name="name" disabled class="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 outline-none transition-all cursor-not-allowed">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Units to Add</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="plus" class="w-4 h-4 text-slate-400"></i>
+                    </div>
+                    <input type="number" name="added_stock" required min="1" class="pl-10 w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+                </div>
+                <p class="text-xs text-slate-500 mt-1">This will be added to the current stock count.</p>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center">
+                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> Confirm Addition
+                </button>
+            </div>
+        </form>
+    </div>
+</template>
+
+<template id="updatePriceModal">
+    <div class="flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900">Update Pricing</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                <input type="text" name="name" disabled class="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 outline-none transition-all cursor-not-allowed">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Cost Price (QAR)</label>
+                    <input type="number" step="0.01" name="cost_price" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Selling Price (QAR)</label>
+                    <input type="number" step="0.01" name="selling_price" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors flex items-center">
+                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> Update Price
+                </button>
+            </div>
+        </form>
+    </div>
+</template>
+
+<template id="printBarcodeModal">
+    <div class="flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900">Print Barcode</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-6 flex flex-col items-center justify-center space-y-6" id="barcode-preview-container">
+            <h4 id="barcode-product-name" class="font-bold text-slate-800 text-center"></h4>
+            
+            <div id="barcode-wrapper" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center min-h-[150px] w-full max-w-sm">
+                <div class="print-text print-shop-name hidden">Global Smart</div>
+                <div id="barcode-print-product-name" class="print-text hidden"></div>
+                <div id="barcode-print-product-price" class="print-text hidden" style="font-size: 10px; margin-top: 2px;"></div>
+                <!-- SVG barcode goes here -->
+                <svg id="barcode-svg"></svg>
+                <p id="no-barcode-msg" class="text-slate-500 font-medium hidden print-hide">No barcode generated yet.</p>
+            </div>
+
+            <div class="flex items-center justify-center gap-3 w-full">
+                <button id="btn-generate-barcode" class="px-4 py-2 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-200 transition-colors hidden items-center">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i> Generate
+                </button>
+                <button id="btn-print-barcode" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors hidden items-center">
+                    <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Print Barcode
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        new TailwindDataTable('inventoryTable', 'inventorySearch', 'inventoryCount');
+    });
+</script>
+{% endblock %}

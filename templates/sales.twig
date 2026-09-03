@@ -1,0 +1,345 @@
+{% extends "layout.twig" %}
+
+{% block title %}Sales History | Global Smart{% endblock %}
+{% block header_title %}Sales History{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+    @page { margin: 0; size: 80mm auto; }
+    body { margin: 0; padding: 0; }
+    body * { visibility: hidden; }
+    #receiptModal, #receiptModal * { visibility: visible; color: #000 !important; }
+    #receiptModal { position: absolute; left: 0; top: 0; width: 100%; min-height: 100%; background: white !important; z-index: 99999; display: block !important; }
+    #receiptModal > div { box-shadow: none; max-width: 100%; margin: 0; padding: 0; }
+    #receiptPrintArea { width: 100%; max-width: 80mm; margin: 0; box-shadow: none; border: none; padding: 0; }
+    #receiptPrintArea * { visibility: visible; }
+    /* hide the modal header and footer */
+    #receiptModal > div > div:first-child,
+    #receiptModal > div > div:last-child { display: none !important; }
+}
+</style>
+
+<div class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 no-print">
+    <div>
+        <p class="text-slate-500 text-sm">Review past transactions, reprint receipts, or process returns.</p>
+    </div>
+    <div class="flex gap-3">
+        <form method="GET" action="/sales" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+    <input type="date" name="start_date" value="{{ start_date }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
+    <span class="text-slate-400 text-sm hidden sm:inline">to</span>
+    <input type="date" name="end_date" value="{{ end_date }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
+    <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+        <button type="submit" class="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors text-center">
+            Filter
+        </button>
+        {% if start_date %}
+        <a href="/sales" class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold shadow-sm hover:bg-slate-200 transition-colors text-center">
+            Clear
+        </a>
+        {% endif %}
+    </div>
+</form>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden no-print">
+    <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/30">
+        <div class="flex flex-col sm:flex-row gap-4 w-full md:flex-1 md:max-w-xl">
+            <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+                </div>
+                <input type="text" id="salesSearch" placeholder="Search by Invoice ID, Cashier, or Customer..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+            </div>
+            <select class="w-full sm:w-auto shrink-0 min-w-[130px] px-4 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                <option>All Time</option>
+                <option>Today</option>
+                <option>This Week</option>
+                <option>This Month</option>
+            </select>
+        </div>
+        <div class="w-full md:w-auto px-4 py-2 border border-slate-200 rounded-lg bg-white flex items-center justify-center md:justify-start gap-2 text-sm text-slate-600 font-medium">
+            <i data-lucide="history" class="w-4 h-4 text-indigo-500"></i>
+            <span id="salesCount">Records: {{ sales|length }}</span>
+        </div>
+    </div>
+
+    {% if sales is empty %}
+        <div class="p-16 flex flex-col items-center justify-center text-center bg-white">
+            <i data-lucide="file-x-2" class="w-12 h-12 text-slate-300 mb-4"></i>
+            <p class="text-slate-500 font-medium">No sales records found matching your search.</p>
+        </div>
+    {% else %}
+        <div class="overflow-x-auto">
+            <table id="salesTable" class="w-full text-left text-sm text-slate-600">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
+                    <tr>
+                        <th class="px-6 py-4">Invoice & Date</th>
+                        <th class="px-6 py-4">Cashier</th>
+                        <th class="px-6 py-4">Branch</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Total (QAR)</th>
+                        <th class="px-6 py-4">Paid (QAR)</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for sale in sales %}
+                    <tr class="hover:bg-slate-50/50 transition-colors {% if sale.status == 'Voided' %}opacity-60 bg-slate-50{% endif %}">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-900 {% if sale.status == 'Voided' %}line-through{% endif %}">{{ sale.invoice_id }}</div>
+                            <div class="text-xs text-slate-500">{{ sale.sale_date|date("M d, Y h:i A") }}</div>
+                        </td>
+                        <td class="px-6 py-4 font-medium">{{ sale.cashier_name|default('Unknown') }}</td>
+                        <td class="px-6 py-4">
+                            <span class="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{{ sale.branch_name|default('—') }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if sale.status == 'Voided' %}
+                                <span class="px-2 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-md uppercase tracking-wider">Voided</span>
+                            {% else %}
+                                <span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-md uppercase tracking-wider">Completed</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 font-bold text-slate-900">QAR {{ sale.total|number_format(2) }}</td>
+                        <td class="px-6 py-4 text-emerald-600 font-medium">QAR {{ sale.paid|number_format(2) }}</td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <button onclick="fetchAndShowReceipt({{ sale.id }}, false)" class="text-indigo-600 hover:text-indigo-800 p-1.5 hover:bg-indigo-50 rounded-lg transition-colors" title="View Receipt">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="fetchAndShowReceipt({{ sale.id }}, true)" class="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded-lg transition-colors" title="Print Receipt">
+                                    <i data-lucide="printer" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="downloadReceipt({{ sale.id }})" class="text-emerald-600 hover:text-emerald-800 p-1.5 hover:bg-emerald-50 rounded-lg transition-colors" title="Download Receipt Text">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                </button>
+                                {% if current_user.role == 'Admin' and sale.status != 'Voided' %}
+                                <button onclick="voidSale({{ sale.id }}, '{{ sale.invoice_id }}')" class="text-rose-600 hover:text-rose-800 p-1.5 hover:bg-rose-50 rounded-lg transition-colors" title="Void Sale & Restore Stock">
+                                    <i data-lucide="ban" class="w-4 h-4"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Receipt Modal -->
+<div id="receiptModal" class="fixed inset-0 bg-slate-900/50 z-[60] hidden items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 no-print">
+            <h3 class="font-bold text-lg text-slate-800">Receipt Details</h3>
+            <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto bg-slate-50 flex-1 flex justify-center">
+            <!-- Thermal Receipt Preview -->
+            <div id="receiptPrintArea" class="bg-white p-6 shadow-sm border border-slate-200 w-full max-w-[80mm] text-slate-800 text-sm" style="font-family: 'Courier New', Courier, monospace;">
+                <!-- Filled via JS -->
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-100 bg-white flex justify-end gap-3 no-print">
+            <button onclick="closeReceiptModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">Close</button>
+            <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center gap-2">
+                <i data-lucide="printer" class="w-4 h-4"></i> Print
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if(document.getElementById('salesTable')) {
+            new TailwindDataTable('salesTable', 'salesSearch', 'salesCount');
+        }
+    });
+
+    let currentReceiptText = '';
+
+    function closeReceiptModal() {
+        document.getElementById('receiptModal').classList.add('hidden');
+        document.getElementById('receiptModal').classList.remove('flex');
+    }
+
+    async function fetchAndShowReceipt(id, autoPrint = false) {
+        try {
+            const response = await fetch('/sales/view/' + id);
+            const data = await response.json();
+            
+            if (!data.success) {
+                showToast(data.message, 'error');
+                return;
+            }
+            
+            const sale = data.sale;
+            let html = `
+                <div class="text-center pt-2 pb-2 mx-4 text-slate-900 font-bold">
+                    <h2 class="text-xl uppercase tracking-widest mb-1">GLOBAL SMART</h2>
+                    <p class="text-xs mt-1">${sale.sale_date}</p>
+                    <p class="text-xs mt-0.5 font-bold">Contact : 7096 4494</p>
+                </div>
+                
+                <div class="border-t border-b border-dashed border-slate-900 py-1 mx-4 mb-2 text-[11px] font-bold text-slate-900 text-left">
+                    <p class="mb-0.5">Inv.#: ${sale.invoice_id}</p>
+                    <p>Cashier: ${sale.cashier_name || 'System'}</p>
+                </div>
+                
+                <div class="px-4 relative">
+                    <div class="flex justify-between text-[11px] font-bold border-b border-dashed border-slate-900 pb-1 mb-2 text-slate-900">
+                        <span class="w-[45%] text-left">Sl.# Item</span>
+                        <span class="w-[15%] text-center">Qty</span>
+                        <span class="w-[20%] text-right">Rate</span>
+                        <span class="w-[20%] text-right">Total</span>
+                    </div>
+                    
+                    <ul class="space-y-1 mb-4 text-[11px] font-bold text-slate-900">
+            `;
+            
+            let totalQty = 0;
+            let textRep = `Global Smart\nContact: 7096 4494\n--------------------------------\nInvoice: ${sale.invoice_id}\nDate: ${sale.sale_date}\nCashier: ${sale.cashier_name || 'System'}\nStatus: ${sale.status}\n--------------------------------\n`;
+
+            sale.items.forEach((item, index) => {
+                const itemTotal = (item.quantity * item.price).toFixed(2);
+                totalQty += Number(item.quantity);
+                html += `
+                        <li class="pb-1 mb-1 relative">
+                            <div class="flex justify-between items-start">
+                                <div class="w-full text-left leading-tight pr-2">
+                                    ${index + 1}) ${item.product_name}
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-1 w-full pl-2">
+                                <span class="w-[45%] text-left"></span>
+                                <span class="w-[15%] text-center">${item.quantity}</span>
+                                <span class="w-[20%] text-right">${Number(item.price).toFixed(2)}</span>
+                                <span class="w-[20%] text-right">${itemTotal}</span>
+                            </div>
+                        </li>
+                `;
+                textRep += `${index + 1}) ${item.product_name}\n${item.quantity} x ${Number(item.price).toFixed(2)} = ${itemTotal}\n`;
+            });
+            
+            let paymentAmountDisplay = '';
+            if (sale.payment_method === 'Cash') {
+                paymentAmountDisplay = Number(sale.total).toFixed(2);
+            } else if (sale.payment_method !== 'Cash' && sale.payment_method !== 'Split' && (!sale.tendered_amount || Number(sale.tendered_amount) === 0)) {
+                paymentAmountDisplay = Number(sale.total).toFixed(2);
+            } else {
+                paymentAmountDisplay = isNaN(sale.tendered_amount) ? sale.tendered_amount : Number(sale.tendered_amount).toFixed(2);
+            }
+            
+            html += `
+                    </ul>
+                    <div class="mt-auto">
+                        <div class="border-t border-dashed border-slate-900 pt-1 pb-1">
+                            <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
+                                <span>Total</span>
+                                <span>${Number(sale.total).toFixed(2)}</span>
+                            </div>
+                            <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
+                                <span>Net Total</span>
+                                <span>${Number(sale.total).toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-b border-dashed border-slate-900 pt-1 pb-1 mb-2">
+                            <div class="flex justify-between text-[11px] text-slate-900 font-bold">
+                                <span>Total Qty.</span>
+                                <span>${totalQty}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-1 pb-2 text-slate-900 text-center font-bold text-[11px]">
+                            <div class="text-left mb-2 uppercase flex flex-col gap-0.5">
+                                <div><span>${sale.payment_method}</span>: <span>${paymentAmountDisplay}</span></div>
+                                ${sale.payment_method === 'Cash' ? `
+                                <div><span>TENDERED</span>: <span>${Number(sale.tendered_amount).toFixed(2)}</span></div>
+                                <div><span>CHANGE</span>: <span>${Number(sale.change_amount).toFixed(2)}</span></div>
+                                ` : ''}
+                            </div>
+                            <p class="mb-1">THANK YOU</p>
+                            <p class="mb-2 uppercase">Thanks For Coming To Our Store</p>
+                            <div class="border-t border-slate-900 pt-2 pb-2 leading-tight">
+                                Shop No 02, Umm Al Dome Street.<br>Al Muaither
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            textRep += `--------------------------------\nTOTAL: QAR ${Number(sale.total).toFixed(2)}\nMethod: ${sale.payment_method}\nTendered: QAR ${(sale.payment_method !== 'Cash' && sale.payment_method !== 'Split' && (!sale.tendered_amount || Number(sale.tendered_amount) === 0)) ? Number(sale.total).toFixed(2) : (isNaN(sale.tendered_amount) ? sale.tendered_amount : Number(sale.tendered_amount).toFixed(2))}\nChange: QAR ${Number(sale.change_amount).toFixed(2)}\n--------------------------------\nThank you for your business!\n`;
+            
+            currentReceiptText = textRep;
+            document.getElementById('receiptPrintArea').innerHTML = html;
+            
+            document.getElementById('receiptModal').classList.remove('hidden');
+            document.getElementById('receiptModal').classList.add('flex');
+            
+            if (autoPrint) {
+                // slight delay to allow rendering
+                setTimeout(() => window.print(), 300);
+            }
+            
+        } catch (error) {
+            showToast('Failed to load receipt.', 'error');
+        }
+    }
+
+    async function downloadReceipt(id) {
+        // Fetch it first to populate the DOM area and show modal temporarily
+        await fetchAndShowReceipt(id, false);
+        
+        // Check if html2pdf is loaded
+        if (typeof html2pdf === 'undefined') {
+            showToast('PDF library is loading, please try again in a moment.', 'error');
+            closeReceiptModal();
+            return;
+        }
+
+        const element = document.getElementById('receiptPrintArea');
+        
+        const opt = {
+            margin:       2,
+            filename:     `Receipt_${id}.pdf`,
+            image:        { type: 'jpeg', quality: 1 },
+            html2canvas:  { scale: 3, useCORS: true },
+            jsPDF:        { unit: 'mm', format: [80, 200], orientation: 'portrait' } // 80mm receipt format
+        };
+
+        // Generate PDF, then close modal
+        html2pdf().set(opt).from(element).save().then(() => {
+            closeReceiptModal();
+            showToast('PDF downloaded successfully.', 'success');
+        });
+    }
+
+    async function voidSale(id, invoiceId) {
+        const confirmed = await showConfirm(`Are you sure you want to void invoice ${invoiceId}?\nThis will revert the status and restore product stock back into inventory.`);
+        if (!confirmed) return;
+        
+        try {
+            const response = await fetch('/sales/void/' + id, { method: 'POST' });
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('Sale voided successfully.', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(result.message || 'Failed to void sale.', 'error');
+            }
+        } catch(error) {
+            showToast('An error occurred.', 'error');
+        }
+    }
+</script>
+{% endblock %}

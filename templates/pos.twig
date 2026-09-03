@@ -1,0 +1,801 @@
+{% extends "layout.twig" %}
+
+{% block title %}POS Terminal | Global Smart{% endblock %}
+{% block header_title %}Point of Sale{% endblock %}
+
+{# Override sidebar behavior for POS to collapse it by default on desktop #}
+{% block sidebar_desktop_class %}{% endblock %}
+{% block hamburger_class %}{% endblock %}
+{% block backdrop_class %}{% endblock %}
+
+{% block header_actions %}
+<a href="/" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2 text-sm border border-slate-200">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> <span class="hidden sm:inline">Dashboard</span>
+</a>
+{% if active_shift %}
+<button onclick="promptEndShift()" class="px-3 py-1.5 bg-rose-100 text-rose-700 font-medium rounded-lg hover:bg-rose-200 transition-colors flex items-center gap-2 text-sm border border-rose-200 shadow-sm">
+    <i data-lucide="stop-circle" class="w-4 h-4"></i> End Shift
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+    @page { margin: 0; size: 80mm auto; }
+    body { margin: 0; padding: 0; }
+    body * {
+        visibility: hidden;
+    }
+    #receipt-container, #receipt-container * {
+        visibility: visible;
+        color: #000 !important;
+    }
+    #receipt-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 80mm;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+        background-color: white;
+    }
+    .no-print {
+        display: none !important;
+    }
+    #cartContentWrapper {
+        display: block !important;
+        height: auto !important;
+    }
+    #receipt-container .overflow-y-auto {
+        overflow: visible !important;
+    }
+}
+</style>
+{% if not active_shift %}
+<!-- Start Shift Modal -->
+<div id="shiftStartModal" class="fixed inset-0 bg-slate-900/80 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden relative">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-indigo-50">
+            <h3 class="font-bold text-lg text-indigo-900">Start Shift</h3>
+            <a href="/" class="text-slate-400 hover:text-indigo-600 transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </a>
+        </div>
+        <div class="p-6 space-y-4">
+            <p class="text-sm text-slate-600">Please enter the starting cash in the drawer to begin your shift.</p>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Starting Cash (QAR)</label>
+                <input type="number" id="startingCashInput" class="w-full px-4 py-3 border rounded-xl bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-lg" placeholder="0.00">
+            </div>
+            <div class="flex flex-col gap-3 mt-4">
+                <button onclick="startShift()" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors uppercase text-sm tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
+                    <i data-lucide="play-circle" class="w-5 h-5"></i> Start Shift
+                </button>
+                <a href="/" class="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors uppercase text-sm tracking-wider flex items-center justify-center gap-2">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="h-full flex flex-col md:flex-row gap-6 -mx-2 md:mx-0">
+    <!-- Left Column: Products Selection -->
+    <div class="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex gap-4 bg-slate-50/30">
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+                </div>
+                <input type="text" id="posSearch" placeholder="Search products..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+            </div>
+        </div>
+
+        <!-- Category Pills -->
+        <div class="flex overflow-x-auto gap-2 p-3 bg-white border-b border-slate-100 no-scrollbar" style="scrollbar-width: none;" id="posCategoryFilter">
+            <button class="category-pill active whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white transition-colors" data-category="all">
+                All Items
+            </button>
+            {% for category in categories %}
+            <button class="category-pill whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition-colors" data-category="{{ category.name|e('html_attr') }}">
+                {{ category.name }}
+            </button>
+            {% endfor %}
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="flex-1 overflow-y-auto p-4 bg-slate-50/10">
+            {% if products is empty %}
+                <div class="h-full flex flex-col items-center justify-center text-center text-slate-500">
+                    <i data-lucide="box" class="w-12 h-12 text-slate-300 mb-3"></i>
+                    <p>No products available in stock.</p>
+                </div>
+            {% else %}
+                <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="posProductGrid">
+                    {% for product in products %}
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all group select-none pos-product-card" data-barcode="{{ product.barcode|default('') }}" data-category="{{ product.category_name|default('Uncategorized')|e('html_attr') }}" onclick="addToCart({{ product.id }}, '{{ product.name|e('js') }}', {{ product.selling_price }}, {{ product.cost_price|default(0) }}, '{{ product.warranty|default('')|e('js') }}')">
+                        <div class="w-full h-24 bg-slate-100 rounded-lg mb-3 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+                            <i data-lucide="smartphone" class="w-8 h-8 text-slate-300 group-hover:text-indigo-400"></i>
+                        </div>
+                        <h4 class="font-medium text-slate-800 text-sm truncate" title="{{ product.name }}">{{ product.name }}</h4>
+                        <div class="mt-2 flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-indigo-600 font-bold text-sm">QAR {{ product.selling_price|number_format(2) }}</span>
+                                <span class="text-xs text-slate-500">{{ product.branch_stock }} in stock</span>
+                            </div>
+                            {% if product.warranty %}
+                            <div class="text-[10px] text-amber-600 font-medium bg-amber-50 px-1.5 py-0.5 rounded w-fit">
+                                <i data-lucide="shield-check" class="w-3 h-3 inline"></i> {{ product.warranty }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column: Cart / Checkout -->
+    <!-- Right Panel: Bill Preview -->
+    <div class="w-full md:w-[400px] flex flex-col h-full min-h-[500px] bg-slate-200 rounded-2xl p-3 shadow-inner">
+        <!-- Thermal Receipt Style -->
+        <div id="receipt-container" class="bg-white flex-1 flex flex-col shadow-md w-full relative overflow-hidden" style="font-family: 'Courier New', Courier, monospace; width: 100%;">
+            
+            <!-- Header -->
+            <div class="text-center pt-2 pb-2">
+                <h2 class="font-bold text-xl uppercase tracking-widest mb-1 text-slate-900">Global Smart</h2>
+                <p class="text-xs mt-1">{{ 'now'|date('d/m/Y h:i A') }}</p>
+                <p class="text-xs mt-0.5 font-bold">Contact : 7096 4494</p>
+            </div>
+            
+            <!-- Meta Data -->
+            <div class="border-t border-b border-dashed border-slate-900 py-1 mx-4 mb-2 text-[11px] font-bold text-slate-900 text-left">
+                <p class="hidden print:block mb-0.5">Inv.#: <span id="receiptInvoice"></span></p>
+                <p>Cashier: {{ current_user.username }}</p>
+            </div>
+            
+            <!-- Items Container -->
+            <div class="flex-1 overflow-y-auto px-4 py-2 relative">
+                <div id="emptyCartState" class="h-full flex flex-col items-center justify-center text-center text-slate-400 py-12">
+                    <i data-lucide="receipt" class="w-10 h-10 mb-2 opacity-50 text-slate-300"></i>
+                    <p class="text-sm font-bold uppercase tracking-widest">No Items</p>
+                </div>
+                
+                <div id="cartContentWrapper" class="hidden h-full flex-col">
+                    <div class="flex justify-between text-[11px] font-bold border-b border-dashed border-slate-900 pb-1 mb-2 text-slate-900">
+                        <span class="w-[45%] text-left">Sl.# Item</span>
+                        <span class="w-[15%] text-center">Qty</span>
+                        <span class="w-[20%] text-right">Rate</span>
+                        <span class="w-[20%] text-right">Total</span>
+                    </div>
+                    
+                    <!-- JS Injected Items -->
+                    <ul id="cartList" class="space-y-1 mb-4 text-[11px] font-bold text-slate-900"></ul>
+                    
+                    <!-- Summary -->
+                    <div class="mt-auto">
+                        <div class="border-t border-dashed border-slate-900 pt-1 pb-1">
+                            <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
+                                <span>Total</span>
+                                <span id="cartSubtotal">0.00</span>
+                            </div>
+                            <div class="flex justify-between text-[11px] mb-1 items-center text-slate-900 font-bold group">
+                                <span class="flex items-center gap-1">
+                                    Discount 
+                                    <i data-lucide="edit-2" class="w-3 h-3 text-slate-300 group-hover:text-indigo-500 transition-colors no-print"></i>
+                                </span>
+                                <div class="flex items-center">
+                                    <span class="mr-1">-</span>
+                                    <input type="number" id="discountInput" value="0" min="0" step="0.01" oninput="updateCartUI()" class="w-16 text-right bg-transparent outline-none font-bold text-slate-900 p-0 text-[11px]">
+                                </div>
+                            </div>
+                            <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
+                                <span>Net Total</span>
+                                <span id="cartTotal">0.00</span>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-b border-dashed border-slate-900 pt-1 pb-1 mb-2">
+                            <div class="flex justify-between text-[11px] text-slate-900 font-bold">
+                                <span>Total Qty.</span>
+                                <span id="cartTotalQty">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Print Only Payment Summary -->
+                        <div id="receiptPaymentSummary" class="pt-1 pb-2 hidden text-slate-900 text-center font-bold text-[11px]">
+                            <div class="text-left mb-2 uppercase flex flex-col gap-0.5">
+                                <div><span id="receiptPayMethod">CASH</span>: <span id="receiptAmount">0.00</span></div>
+                                <div id="receiptTenderedRow" class="hidden"><span>TENDERED</span>: <span id="receiptTendered">0.00</span></div>
+                                <div id="receiptChangeRow" class="hidden"><span>CHANGE</span>: <span id="receiptChange">0.00</span></div>
+                            </div>
+                            <p class="mb-1">THANK YOU</p>
+                            <p class="mb-2 uppercase">Thanks For Coming To Our Store</p>
+                            <div class="border-t border-slate-900 pt-2 pb-2 leading-tight">
+                                Shop No 02, Umm Al Dome Street.<br>Al Muaither
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="mt-3 flex gap-2">
+            <button onclick="clearCart()" class="py-3 px-4 bg-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-400 transition-colors uppercase text-sm tracking-wider">
+                <i data-lucide="trash-2" class="w-5 h-5 mx-auto"></i>
+            </button>
+            <button onclick="processCheckout()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors uppercase text-sm tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
+                <i data-lucide="printer" class="w-5 h-5"></i>
+                Print & Pay
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkoutModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-lg text-slate-800">Checkout Payment</h3>
+            <button onclick="closeCheckoutModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="flex justify-between items-center p-3 bg-indigo-50 rounded-xl mb-4 text-indigo-900">
+                <span class="font-medium">Total Amount Due</span>
+                <span class="font-black text-2xl" id="modalTotalDue">QAR 0.00</span>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Payment Method</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+                        <input type="radio" name="payment_method" value="Cash" checked class="text-indigo-600" onchange="handlePaymentMethodChange()"> 
+                        <i data-lucide="banknote" class="w-5 h-5 text-emerald-600"></i> Cash
+                    </label>
+                    <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+                        <input type="radio" name="payment_method" value="Card" class="text-indigo-600" onchange="handlePaymentMethodChange()"> 
+                        <i data-lucide="credit-card" class="w-5 h-5 text-blue-600"></i> Card
+                    </label>
+                    <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+                        <input type="radio" name="payment_method" value="Fawran" class="text-indigo-600" onchange="handlePaymentMethodChange()"> 
+                        <i data-lucide="smartphone" class="w-5 h-5 text-purple-600"></i> Fawran
+                    </label>
+                    <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+                        <input type="radio" name="payment_method" value="Split" class="text-indigo-600" onchange="handlePaymentMethodChange()"> 
+                        <i data-lucide="split" class="w-5 h-5 text-rose-600"></i> Split
+                    </label>
+                </div>
+            </div>
+
+            <!-- Cash Input -->
+            <div id="cashInputSection" class="mt-4 p-4 border border-emerald-100 bg-emerald-50/30 rounded-xl space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Tendered Amount (Cash)</label>
+                    <input type="number" id="tenderedAmount" class="w-full px-3 py-2 border rounded-lg font-bold text-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0.00" oninput="calculateChange()">
+                </div>
+                <div class="flex justify-between items-center text-sm font-bold">
+                    <span class="text-slate-600">Change Due:</span>
+                    <span id="changeAmount" class="text-xl text-emerald-600">QAR 0.00</span>
+                </div>
+            </div>
+
+            <!-- Split Inputs -->
+            <div id="splitInputSection" class="mt-4 p-4 border border-rose-100 bg-rose-50/30 rounded-xl space-y-3 hidden">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Split Amounts</p>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="banknote" class="w-4 h-4"></i> Cash:</label>
+                    <input type="number" id="splitCash" class="w-full px-2 py-1.5 border rounded-lg font-medium outline-none" value="0" oninput="validateSplit()">
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="credit-card" class="w-4 h-4"></i> Card:</label>
+                    <input type="number" id="splitCard" class="w-full px-2 py-1.5 border rounded-lg font-medium outline-none" value="0" oninput="validateSplit()">
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="smartphone" class="w-4 h-4"></i> Fawran:</label>
+                    <input type="number" id="splitFawran" class="w-full px-2 py-1.5 border rounded-lg font-medium outline-none" value="0" oninput="validateSplit()">
+                </div>
+                <div class="text-right text-xs font-bold mt-2" id="splitStatus">Remaining: QAR 0.00</div>
+            </div>
+
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+            <button onclick="closeCheckoutModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-100 font-medium w-1/3">Cancel</button>
+            <button onclick="submitCheckout()" id="confirmCheckoutBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold w-2/3 flex justify-center items-center gap-2">
+                <i data-lucide="check-circle" class="w-5 h-5"></i> Confirm & Print
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- End Shift Modal -->
+<div id="endShiftModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-rose-50">
+            <h3 class="font-bold text-lg text-rose-900">End Shift</h3>
+            <button onclick="closeEndShiftModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <p class="text-sm text-slate-600">Enter the actual ending cash in drawer to close your shift.</p>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Ending Cash (QAR)</label>
+                <input type="number" id="endingCashInput" class="w-full px-4 py-3 border rounded-xl bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-rose-500 font-bold text-lg" placeholder="0.00">
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+            <button onclick="closeEndShiftModal()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-100 font-medium w-1/3">Cancel</button>
+            <button onclick="submitEndShift()" id="confirmEndShiftBtn" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-bold w-2/3 flex justify-center items-center gap-2">
+                <i data-lucide="stop-circle" class="w-5 h-5"></i> Close Shift
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function startShift() {
+        const startingCash = parseFloat(document.getElementById('startingCashInput').value) || 0;
+        try {
+            const res = await fetch('/pos/shift/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ starting_cash: startingCash })
+            });
+            const result = await res.json();
+            if (result.success) {
+                window.location.reload();
+            } else {
+                showToast(result.message || 'Failed to start shift', 'error');
+            }
+        } catch (e) {
+            showToast('Error starting shift', 'error');
+        }
+    }
+
+    function promptEndShift() {
+        document.getElementById('endShiftModal').classList.remove('hidden');
+        document.getElementById('endShiftModal').classList.add('flex');
+    }
+
+    function closeEndShiftModal() {
+        document.getElementById('endShiftModal').classList.add('hidden');
+        document.getElementById('endShiftModal').classList.remove('flex');
+    }
+
+    async function submitEndShift() {
+        const endingCash = parseFloat(document.getElementById('endingCashInput').value) || 0;
+        const btn = document.getElementById('confirmEndShiftBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Processing...';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+        try {
+            const res = await fetch('/pos/shift/end', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ending_cash: endingCash })
+            });
+            const result = await res.json();
+            if (result.success) {
+                showToast('Shift closed successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(result.message || 'Failed to close shift', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="stop-circle" class="w-5 h-5"></i> Close Shift';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        } catch (e) {
+            showToast('Error ending shift', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="stop-circle" class="w-5 h-5"></i> Close Shift';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }
+
+    // Minimal POS Cart Logic
+    let cart = [];
+
+    function updateCartUI() {
+        const emptyState = document.getElementById('emptyCartState');
+        const cartContentWrapper = document.getElementById('cartContentWrapper');
+        const cartList = document.getElementById('cartList');
+        const cartSubtotalEl = document.getElementById('cartSubtotal');
+        const cartTotalEl = document.getElementById('cartTotal');
+        const discountInput = document.getElementById('discountInput');
+
+        if (cart.length === 0) {
+            emptyState.classList.remove('hidden');
+            cartContentWrapper.classList.remove('flex');
+            cartContentWrapper.classList.add('hidden');
+            
+            // Reset discount
+            if(discountInput) discountInput.value = '0';
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        cartContentWrapper.classList.remove('hidden');
+        cartContentWrapper.classList.add('flex');
+
+        let subtotal = 0;
+        let totalCost = 0;
+        let totalQty = 0;
+        cartList.innerHTML = '';
+        
+        cart.forEach((item, index) => {
+            const itemTotal = item.price * item.quantity;
+            subtotal += itemTotal;
+            totalCost += (item.cost || 0) * item.quantity;
+            totalQty += item.quantity;
+            
+            const warrantyHtml = item.warranty ? `<div class="text-[9px] text-slate-500 italic mt-0.5 ml-3">- Wrty: ${item.warranty}</div>` : '';
+            
+            cartList.innerHTML += `
+                <li class="pb-1 mb-1 relative">
+                    <div class="flex justify-between items-start">
+                        <div class="w-full text-left leading-tight pr-12">
+                            ${index + 1}) ${item.name}
+                            ${warrantyHtml}
+                        </div>
+                        <div class="no-print absolute top-0 right-0 flex gap-1 bg-white pl-1">
+                            <button onclick="updateQty(${index}, -1)" class="w-4 h-4 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 flex items-center justify-center font-black pb-0.5">-</button>
+                            <button onclick="updateQty(${index}, 1)" class="w-4 h-4 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 flex items-center justify-center font-black pb-0.5">+</button>
+                            <button onclick="removeFromCart(${index})" class="text-rose-500 hover:text-rose-700" title="Remove item">
+                                <i data-lucide="trash" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center mt-1 w-full pl-2">
+                        <span class="w-[45%] text-left"></span>
+                        <span class="w-[15%] text-center">${item.quantity}</span>
+                        <span class="w-[20%] text-right">${item.price.toFixed(2)}</span>
+                        <span class="w-[20%] text-right">${itemTotal.toFixed(2)}</span>
+                    </div>
+                </li>
+            `;
+        });
+
+        // Compute Discount
+        const isAdmin = {{ (current_user.role == 'Admin') ? 'true' : 'false' }};
+        let discount = parseFloat(discountInput.value) || 0;
+        
+        if (!isAdmin) {
+            let maxDiscount = subtotal - totalCost;
+            if (maxDiscount < 0) maxDiscount = 0;
+            if (discount > maxDiscount) {
+                discount = maxDiscount;
+                if (discountInput) discountInput.value = discount.toFixed(2);
+                showToast('Discount cannot reduce total below cost price for non-admins.', 'warning');
+            }
+        } else {
+            if (discount > subtotal) {
+                discount = subtotal;
+                if (discountInput) discountInput.value = discount.toFixed(2);
+            }
+        }
+        
+        const total = subtotal - discount;
+
+        cartSubtotalEl.innerText = subtotal.toFixed(2);
+        cartTotalEl.innerText = total.toFixed(2);
+        if(document.getElementById('cartTotalQty')) {
+            document.getElementById('cartTotalQty').innerText = totalQty;
+        }
+        
+        lucide.createIcons();
+    }
+
+    function addToCart(id, name, price, cost = 0, warranty = '') {
+        const existingItem = cart.find(i => i.id === id);
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cart.push({ id, name, price, cost, warranty, quantity: 1 });
+        }
+        updateCartUI();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        updateCartUI();
+    }
+
+    function updateQty(index, change) {
+        if (cart[index].quantity + change > 0) {
+            cart[index].quantity += change;
+        } else {
+            removeFromCart(index);
+            return;
+        }
+        updateCartUI();
+    }
+
+    async function clearCart() {
+        if(cart.length > 0 && await showConfirm('Clear all items from the cart?')) {
+            cart = [];
+            updateCartUI();
+        }
+    }
+
+    function processCheckout() {
+        if (cart.length === 0) return;
+        const total = document.getElementById('cartTotal').innerText;
+        document.getElementById('modalTotalDue').innerText = 'QAR ' + total;
+        document.getElementById('checkoutModal').classList.remove('hidden');
+        document.getElementById('checkoutModal').classList.add('flex');
+        
+        // Reset inputs
+        document.getElementById('tenderedAmount').value = '';
+        document.getElementById('changeAmount').innerText = 'QAR 0.00';
+        document.getElementById('splitCash').value = '0';
+        document.getElementById('splitCard').value = '0';
+        document.getElementById('splitFawran').value = '0';
+        
+        document.querySelector('input[name="payment_method"][value="Cash"]').checked = true;
+        handlePaymentMethodChange();
+        lucide.createIcons();
+    }
+
+    function closeCheckoutModal() {
+        document.getElementById('checkoutModal').classList.add('hidden');
+        document.getElementById('checkoutModal').classList.remove('flex');
+    }
+
+    function handlePaymentMethodChange() {
+        const method = document.querySelector('input[name="payment_method"]:checked').value;
+        const cashInput = document.getElementById('cashInputSection');
+        const splitInput = document.getElementById('splitInputSection');
+        const confirmBtn = document.getElementById('confirmCheckoutBtn');
+        
+        cashInput.classList.add('hidden');
+        splitInput.classList.add('hidden');
+        confirmBtn.disabled = false;
+        
+        if (method === 'Cash') {
+            cashInput.classList.remove('hidden');
+            calculateChange();
+        } else if (method === 'Split') {
+            splitInput.classList.remove('hidden');
+            validateSplit();
+        }
+    }
+
+    function calculateChange() {
+        const total = parseFloat(document.getElementById('cartTotal').innerText);
+        const tendered = parseFloat(document.getElementById('tenderedAmount').value) || 0;
+        const change = tendered - total;
+        
+        if (change >= 0) {
+            document.getElementById('changeAmount').innerText = 'QAR ' + change.toFixed(2);
+            document.getElementById('changeAmount').classList.remove('text-rose-600');
+            document.getElementById('changeAmount').classList.add('text-emerald-600');
+            document.getElementById('confirmCheckoutBtn').disabled = false;
+        } else {
+            document.getElementById('changeAmount').innerText = 'Insufficient';
+            document.getElementById('changeAmount').classList.add('text-rose-600');
+            document.getElementById('changeAmount').classList.remove('text-emerald-600');
+            document.getElementById('confirmCheckoutBtn').disabled = true;
+        }
+    }
+
+    function validateSplit() {
+        const total = parseFloat(document.getElementById('cartTotal').innerText);
+        const cash = parseFloat(document.getElementById('splitCash').value) || 0;
+        const card = parseFloat(document.getElementById('splitCard').value) || 0;
+        const fawran = parseFloat(document.getElementById('splitFawran').value) || 0;
+        const currentSum = cash + card + fawran;
+        const diff = total - currentSum;
+        
+        const status = document.getElementById('splitStatus');
+        const confirmBtn = document.getElementById('confirmCheckoutBtn');
+        
+        if (Math.abs(diff) < 0.01) {
+            status.innerText = 'Matched! QAR 0.00';
+            status.classList.remove('text-rose-600');
+            status.classList.add('text-emerald-600');
+            confirmBtn.disabled = false;
+        } else {
+            status.innerText = (diff > 0 ? 'Remaining: QAR ' : 'Overpaid: QAR ') + Math.abs(diff).toFixed(2);
+            status.classList.add('text-rose-600');
+            status.classList.remove('text-emerald-600');
+            confirmBtn.disabled = true;
+        }
+    }
+
+    async function submitCheckout() {
+        const confirmBtn = document.getElementById('confirmCheckoutBtn');
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Processing...';
+        lucide.createIcons();
+
+        const method = document.querySelector('input[name="payment_method"]:checked').value;
+        const tendered = parseFloat(document.getElementById('tenderedAmount').value) || 0;
+        const total = parseFloat(document.getElementById('cartTotal').innerText);
+        const change = method === 'Cash' ? (tendered - total) : 0;
+        
+        const splitCash = parseFloat(document.getElementById('splitCash').value) || 0;
+        const splitCard = parseFloat(document.getElementById('splitCard').value) || 0;
+        const splitFawran = parseFloat(document.getElementById('splitFawran').value) || 0;
+
+        try {
+            const response = await fetch('/pos/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cart: cart,
+                    discount: parseFloat(document.getElementById('discountInput').value) || 0,
+                    payment_method: method,
+                    tendered_amount: tendered,
+                    change_amount: change,
+                    split_cash: splitCash,
+                    split_card: splitCard,
+                    split_fawran: splitFawran
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // Setup Receipt for Print
+                document.getElementById('receiptPaymentSummary').classList.remove('hidden');
+                document.getElementById('receiptPaymentSummary').classList.add('block');
+                
+                document.getElementById('receiptPayMethod').innerText = method;
+                if (method === 'Cash') {
+                    document.getElementById('receiptAmount').innerText = document.getElementById('cartTotal').innerText;
+                    document.getElementById('receiptTenderedRow').classList.remove('hidden');
+                    document.getElementById('receiptTendered').innerText = tendered.toFixed(2);
+                    document.getElementById('receiptChangeRow').classList.remove('hidden');
+                    document.getElementById('receiptChange').innerText = change.toFixed(2);
+                } else if (method === 'Split') {
+                    document.getElementById('receiptPayMethod').innerText = 'Cash/Card/Fawran';
+                    document.getElementById('receiptAmount').innerText = splitCash.toFixed(2) + '/' + splitCard.toFixed(2) + '/' + splitFawran.toFixed(2);
+                } else {
+                    document.getElementById('receiptAmount').innerText = document.getElementById('cartTotal').innerText;
+                }
+                
+                document.querySelector('.print\\:block').classList.remove('hidden');
+                document.getElementById('receiptInvoice').innerText = result.invoice_id;
+                
+                // Hide unnecessary receipt parts for print
+                const noPrintEls = document.querySelectorAll('.no-print');
+                for(let i = 0; i < noPrintEls.length; i++) {
+                    noPrintEls[i].classList.add('hidden');
+                }
+                
+                // Print the receipt
+                window.print();
+                
+                // Clean up and reset
+                showToast('Transaction completed successfully!', 'success');
+                closeCheckoutModal();
+                cart = [];
+                updateCartUI();
+                
+                // Reset receipt UI
+                document.getElementById('receiptPaymentSummary').classList.add('hidden');
+                document.getElementById('receiptPaymentSummary').classList.remove('block');
+                document.getElementById('receiptTenderedRow').classList.add('hidden');
+                document.getElementById('receiptChangeRow').classList.add('hidden');
+                document.querySelector('.print\\:block').classList.add('hidden');
+                
+                for(let i = 0; i < noPrintEls.length; i++) {
+                    noPrintEls[i].classList.remove('hidden');
+                }
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            showToast('An error occurred during checkout.', 'error');
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Confirm & Print';
+            lucide.createIcons();
+        }
+    }
+
+    let currentCategory = 'all';
+
+    document.getElementById('posSearch')?.addEventListener('input', filterProducts);
+
+    document.querySelectorAll('.category-pill').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.category-pill').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white', 'active');
+                b.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            e.target.classList.remove('bg-slate-100', 'text-slate-600');
+            e.target.classList.add('bg-indigo-600', 'text-white', 'active');
+            
+            currentCategory = e.target.dataset.category;
+            filterProducts();
+        });
+    });
+
+    function filterProducts() {
+        const query = (document.getElementById('posSearch')?.value || '').toLowerCase();
+        const items = document.querySelectorAll('#posProductGrid > div.pos-product-card');
+        
+        items.forEach(item => {
+            const name = item.querySelector('h4').innerText.toLowerCase();
+            const barcode = (item.dataset.barcode || '').toLowerCase();
+            const itemCategory = item.dataset.category || 'Uncategorized';
+            
+            const matchesSearch = name.includes(query) || barcode.includes(query);
+            const matchesCategory = currentCategory === 'all' || itemCategory === currentCategory;
+            
+            if (matchesSearch && matchesCategory) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Barcode scanner listener
+    let barcodeBuffer = "";
+    let barcodeTimer = null;
+
+    document.addEventListener('keydown', (e) => {
+        // If searching and hit enter
+        if (e.target.id === 'posSearch' && e.key === 'Enter') {
+            e.preventDefault();
+            const query = e.target.value.trim().toLowerCase();
+            if (!query) return;
+            
+            const items = document.querySelectorAll('#posProductGrid > div');
+            for (let item of items) {
+                let dbBarcode = item.dataset.barcode ? item.dataset.barcode.toLowerCase() : '';
+                if (dbBarcode && (dbBarcode === query || dbBarcode.replace(/^prd-/, '') === query)) {
+                    item.click();
+                    e.target.value = '';
+                    e.target.dispatchEvent(new Event('input'));
+                    return;
+                }
+            }
+            return;
+        }
+
+        // Ignore other inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        // Global barcode scan
+        if (e.key.length === 1) {
+            barcodeBuffer += e.key;
+            if (barcodeTimer) clearTimeout(barcodeTimer);
+            barcodeTimer = setTimeout(() => {
+                barcodeBuffer = "";
+            }, 100); // 100ms timeout for scanner speed
+        } else if (e.key === 'Enter' && barcodeBuffer.length > 0) {
+            const scanned = barcodeBuffer.toLowerCase();
+            barcodeBuffer = "";
+            if (barcodeTimer) clearTimeout(barcodeTimer);
+            
+            const items = document.querySelectorAll('#posProductGrid > div');
+            let found = false;
+            for (let item of items) {
+                let dbBarcode = item.dataset.barcode ? item.dataset.barcode.toLowerCase() : '';
+                if (dbBarcode && (dbBarcode === scanned || dbBarcode.replace(/^prd-/, '') === scanned)) {
+                    item.click();
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                showToast('Product not found for barcode: ' + scanned, 'error');
+            }
+        }
+    });
+
+</script>
+{% endblock %}

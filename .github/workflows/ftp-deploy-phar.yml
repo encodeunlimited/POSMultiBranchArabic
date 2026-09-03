@@ -1,0 +1,48 @@
+name: Deploy via FTP (Strict PHAR)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader --classmap-authoritative
+
+      - name: Build PHAR
+        run: php -d phar.readonly=0 build-phar.php
+
+      - name: Prepare Host Environment
+        run: |
+          # Swap in the host entry point that requires the PHAR
+          mv host-index.php public/index.php
+
+          # Assemble the slim deploy package — only PHAR + public + htaccess + db init
+          mkdir deploy_package
+          cp app.phar deploy_package/
+          cp -r public deploy_package/
+          cp .htaccess deploy_package/
+
+      - name: Sync files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: 45.130.228.109
+          username: u600962660.mobileadmin
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./deploy_package/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            database.sqlite

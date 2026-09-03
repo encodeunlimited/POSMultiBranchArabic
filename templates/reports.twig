@@ -1,0 +1,481 @@
+{% extends "layout.twig" %}
+
+{% block title %}Reports - Global Smart{% endblock %}
+{% block header_title %}Business Reports{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Controls Header -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div class="flex flex-col md:flex-row gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Start Date</label>
+                <input type="date" id="startDate" class="w-full md:w-auto px-4 py-2 border rounded-xl bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">End Date</label>
+                <input type="date" id="endDate" class="w-full md:w-auto px-4 py-2 border rounded-xl bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow">
+            </div>
+        </div>
+        <button onclick="fetchReports()" id="generateBtn" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 justify-center shadow-sm">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Generate Report
+        </button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="flex gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar">
+        <button onclick="switchTab('sales')" id="tab-sales" class="px-5 py-3 font-semibold text-sm border-b-2 border-indigo-600 text-indigo-700 transition-colors whitespace-nowrap">Sales Report</button>
+        <button onclick="switchTab('inventory')" id="tab-inventory" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Inventory & Stock</button>
+        <button onclick="switchTab('pl')" id="tab-pl" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Profit & Loss</button>
+        <button onclick="switchTab('repairs')" id="tab-repairs" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Repair Report</button>
+        <button onclick="switchTab('shifts')" id="tab-shifts" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Shifts Report</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="hidden py-12 flex flex-col items-center justify-center text-slate-400">
+        <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-4 text-indigo-500"></i>
+        <p class="font-medium">Crunching the numbers...</p>
+    </div>
+
+    <!-- SALES TAB -->
+    <div id="content-sales" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+                <p class="text-indigo-100 text-sm font-bold uppercase tracking-wider mb-1">Total Revenue</p>
+                <h2 class="text-4xl font-black" id="salesTotalRevenue">QAR 0.00</h2>
+                <div class="absolute right-0 bottom-0 opacity-10">
+                    <i data-lucide="trending-up" class="w-32 h-32 -mb-6 -mr-6"></i>
+                </div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Transactions</p>
+                    <h2 class="text-3xl font-black text-slate-800" id="salesTotalTx">0</h2>
+                </div>
+                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
+                    <i data-lucide="receipt" class="w-6 h-6"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Payment Methods Chart -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-5 h-5 text-indigo-500"></i> Revenue by Payment Method</h3>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="paymentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Cashier Performance -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                <div class="p-6 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-indigo-500"></i> Cashier Performance</h3>
+                </div>
+                <div class="flex-1 overflow-auto p-4">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                <th class="pb-3 font-semibold">Cashier</th>
+                                <th class="pb-3 font-semibold text-right">Transactions</th>
+                                <th class="pb-3 font-semibold text-right">Total Sold</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cashierTableBody" class="text-sm">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INVENTORY TAB -->
+    <div id="content-inventory" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Stock Items</p>
+                <h2 class="text-3xl font-black text-slate-800" id="invTotalItems">0</h2>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-4 border-l-rose-500">
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Inventory Cost</p>
+                <h2 class="text-2xl font-bold text-rose-600" id="invTotalCost">QAR 0.00</h2>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-4 border-l-emerald-500">
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Retail Value</p>
+                <h2 class="text-2xl font-bold text-emerald-600" id="invTotalRetail">QAR 0.00</h2>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-100 bg-rose-50/30">
+                <h3 class="font-bold text-rose-700 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> Low Stock Alert (Bottom 10)</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                            <th class="px-6 py-3">Product Name</th>
+                            <th class="px-6 py-3">Current Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lowStockTableBody" class="divide-y divide-slate-100">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPAIRS TAB -->
+    <div id="content-repairs" class="hidden space-y-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-100 bg-amber-50/30">
+                <h3 class="font-bold text-amber-700 flex items-center gap-2"><i data-lucide="wrench" class="w-5 h-5"></i> Repairs by Category</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                            <th class="px-6 py-3">Category Name</th>
+                            <th class="px-6 py-3">Total Repairs</th>
+                            <th class="px-6 py-3">Generated Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody id="repairCategoryTableBody" class="divide-y divide-slate-100">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHIFTS TAB -->
+    <div id="content-shifts" class="hidden space-y-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-100 bg-indigo-50/30">
+                <h3 class="font-bold text-indigo-700 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> Shift Logs</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                            <th class="px-6 py-3">Cashier</th>
+                            <th class="px-6 py-3">Start Time</th>
+                            <th class="px-6 py-3">End Time</th>
+                            <th class="px-6 py-3 text-right">Start Cash</th>
+                            <th class="px-6 py-3 text-right">Cash Sales</th>
+                            <th class="px-6 py-3 text-right">Expected</th>
+                            <th class="px-6 py-3 text-right">Actual Ending</th>
+                            <th class="px-6 py-3 text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shiftsTableBody" class="divide-y divide-slate-100">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- P&L TAB -->
+    <div id="content-pl" class="hidden space-y-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 lg:p-8 max-w-3xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-black text-slate-900">Profit & Loss Statement</h2>
+                <p class="text-sm text-slate-500 font-medium mt-1">For period: <span id="plDateRange"></span></p>
+            </div>
+
+            <div class="space-y-4 text-sm font-medium">
+                <!-- Revenue -->
+                <div class="border-b border-slate-200 pb-2">
+                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">Revenue</h4>
+                    <div class="flex justify-between py-1 text-slate-600">
+                        <span>Product Sales Revenue</span>
+                        <span id="plProdRev">QAR 0.00</span>
+                    </div>
+                    <div class="flex justify-between py-1 text-slate-600">
+                        <span>Repair Services Revenue</span>
+                        <span id="plRepRev">QAR 0.00</span>
+                    </div>
+                </div>
+                <div class="flex justify-between py-2 text-slate-900 font-bold text-base bg-slate-50 px-3 -mx-3 rounded-lg">
+                    <span>Total Revenue</span>
+                    <span id="plTotalRev">QAR 0.00</span>
+                </div>
+
+                <!-- COGS -->
+                <div class="border-b border-slate-200 pb-2 mt-6">
+                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">Cost of Goods Sold (COGS)</h4>
+                    <div class="flex justify-between py-1 text-rose-600">
+                        <span>Cost of Products Sold</span>
+                        <span id="plProdCogs">QAR 0.00</span>
+                    </div>
+                    <div class="flex justify-between py-1 text-rose-600">
+                        <span>Direct Repair Costs</span>
+                        <span id="plRepCogs">QAR 0.00</span>
+                    </div>
+                </div>
+                <div class="flex justify-between py-2 text-rose-700 font-bold text-base bg-rose-50 px-3 -mx-3 rounded-lg">
+                    <span>Total COGS</span>
+                    <span id="plTotalCogs">QAR 0.00</span>
+                </div>
+
+                <!-- Gross Profit -->
+                <div class="flex justify-between py-3 text-indigo-700 font-black text-lg border-b-2 border-indigo-100 mt-2">
+                    <span>Gross Profit</span>
+                    <span id="plGrossProfit">QAR 0.00</span>
+                </div>
+
+                <!-- Expenses -->
+                <div class="border-b border-slate-200 pb-2 mt-6">
+                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">Operating Expenses</h4>
+                    <div class="flex justify-between py-1 text-rose-600">
+                        <span>General Expenses</span>
+                        <span id="plExpenses">QAR 0.00</span>
+                    </div>
+                </div>
+
+                <!-- Net Profit -->
+                <div class="flex justify-between items-center py-4 text-emerald-600 font-black text-2xl mt-4 bg-emerald-50 px-4 -mx-4 rounded-xl border border-emerald-100">
+                    <span>Net Profit</span>
+                    <span id="plNetProfit">QAR 0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let paymentChartInstance = null;
+
+    // Initialize Dates
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+        document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
+        
+        fetchReports();
+    });
+
+    function switchTab(tabId) {
+        // Reset Tabs
+        ['sales', 'inventory', 'pl', 'repairs', 'shifts'].forEach(id => {
+            const btn = document.getElementById(`tab-${id}`);
+            const content = document.getElementById(`content-${id}`);
+            
+            btn.classList.remove('border-indigo-600', 'text-indigo-700');
+            btn.classList.add('border-transparent', 'text-slate-500');
+            content.classList.add('hidden');
+        });
+        
+        // Active Tab
+        const activeBtn = document.getElementById(`tab-${tabId}`);
+        activeBtn.classList.remove('border-transparent', 'text-slate-500');
+        activeBtn.classList.add('border-indigo-600', 'text-indigo-700');
+        document.getElementById(`content-${tabId}`).classList.remove('hidden');
+    }
+    function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+             .toString()
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    }
+
+    async function fetchReports() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const btn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loadingState');
+        const contents = ['content-sales', 'content-inventory', 'content-pl', 'content-repairs', 'content-shifts'];
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Loading...';
+        lucide.createIcons();
+        
+        contents.forEach(id => document.getElementById(id).classList.add('opacity-30', 'pointer-events-none'));
+
+        try {
+            const res = await fetch('/api/reports', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start_date: startDate, end_date: endDate })
+            });
+            const data = await res.json();
+            
+            renderSales(data.sales);
+            renderInventory(data.inventory);
+            renderPL(data.pl, startDate, endDate);
+            if(data.repairs) renderRepairs(data.repairs);
+            if(data.shifts) renderShifts(data.shifts);
+            
+            showToast('Reports generated successfully.', 'success');
+        } catch (error) {
+            showToast('Failed to fetch reports.', 'error');
+            console.error(error);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4"></i> Generate Report';
+            contents.forEach(id => document.getElementById(id).classList.remove('opacity-30', 'pointer-events-none'));
+            lucide.createIcons();
+        }
+    }
+
+    function renderSales(data) {
+        document.getElementById('salesTotalRevenue').innerText = 'QAR ' + parseFloat(data.revenue).toFixed(2);
+        document.getElementById('salesTotalTx').innerText = data.transactions;
+
+        // Chart
+        const ctx = document.getElementById('paymentChart').getContext('2d');
+        if (paymentChartInstance) paymentChartInstance.destroy();
+        
+        const labels = data.payment_methods.map(item => item.payment_method || 'Unknown');
+        const values = data.payment_methods.map(item => parseFloat(item.total));
+        
+        paymentChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
+
+        // Cashiers
+        const tbody = document.getElementById('cashierTableBody');
+        tbody.innerHTML = '';
+        if (data.cashiers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-slate-500">No sales in this period.</td></tr>';
+        } else {
+            data.cashiers.sort((a,b) => b.total - a.total).forEach(c => {
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                        <td class="py-3 font-medium text-slate-700">${c.username}</td>
+                        <td class="py-3 text-right text-slate-500">${c.count}</td>
+                        <td class="py-3 text-right font-bold text-slate-800">QAR ${parseFloat(c.total).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    function renderInventory(data) {
+        document.getElementById('invTotalItems').innerText = data.stats.total_items || 0;
+        document.getElementById('invTotalCost').innerText = 'QAR ' + parseFloat(data.stats.total_cost || 0).toFixed(2);
+        document.getElementById('invTotalRetail').innerText = 'QAR ' + parseFloat(data.stats.total_retail || 0).toFixed(2);
+
+        const tbody = document.getElementById('lowStockTableBody');
+        tbody.innerHTML = '';
+        if (data.low_stock.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-slate-500">Inventory is fully stocked!</td></tr>';
+        } else {
+            data.low_stock.forEach(item => {
+                const stockClass = item.stock_count <= 0 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-3 font-medium text-slate-800">${item.name}</td>
+                        <td class="px-6 py-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${stockClass}">
+                                ${item.stock_count} in stock
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+    }
+    function renderRepairs(data) {
+        const repairCatTbody = document.getElementById('repairCategoryTableBody');
+        repairCatTbody.innerHTML = '';
+        if(!data || !data.by_category || data.by_category.length === 0) {
+            repairCatTbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-slate-500">No repairs found for this period</td></tr>';
+        } else {
+            data.by_category.forEach(cat => {
+                repairCatTbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-3 font-medium text-slate-900">${escapeHtml(cat.category_name || 'Uncategorized')}</td>
+                        <td class="px-6 py-3 text-slate-700">${cat.count}</td>
+                        <td class="px-6 py-3 font-bold text-emerald-600">QAR ${parseFloat(cat.revenue).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    function renderShifts(data) {
+        const tbody = document.getElementById('shiftsTableBody');
+        tbody.innerHTML = '';
+        if(!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-slate-500">No shifts found in this period.</td></tr>';
+        } else {
+            data.forEach(sh => {
+                const startCash = parseFloat(sh.starting_cash || 0);
+                const cashSales = parseFloat(sh.cash_sales || 0);
+                const expected = startCash + cashSales;
+                const actual = parseFloat(sh.ending_cash || 0);
+                const statusBadge = sh.status === 'Open' 
+                    ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Open</span>'
+                    : '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">Closed</span>';
+                
+                let actualClass = '';
+                if(sh.status === 'Closed') {
+                    if (Math.abs(actual - expected) > 0.01) {
+                        actualClass = 'text-rose-600 font-bold';
+                    } else {
+                        actualClass = 'text-emerald-600 font-bold';
+                    }
+                }
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-3 font-medium text-slate-900">${escapeHtml(sh.cashier_name || 'Unknown')}</td>
+                        <td class="px-6 py-3 text-slate-700">${sh.start_time}</td>
+                        <td class="px-6 py-3 text-slate-700">${sh.end_time || '-'}</td>
+                        <td class="px-6 py-3 text-right">QAR ${startCash.toFixed(2)}</td>
+                        <td class="px-6 py-3 text-right">QAR ${cashSales.toFixed(2)}</td>
+                        <td class="px-6 py-3 text-right font-medium">QAR ${expected.toFixed(2)}</td>
+                        <td class="px-6 py-3 text-right ${actualClass}">QAR ${sh.status === 'Closed' ? actual.toFixed(2) : '-'}</td>
+                        <td class="px-6 py-3 text-center">${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    function renderPL(data, start, end) {
+        document.getElementById('plDateRange').innerText = `${start} to ${end}`;
+        
+        document.getElementById('plProdRev').innerText = 'QAR ' + parseFloat(data.products_revenue).toFixed(2);
+        document.getElementById('plRepRev').innerText = 'QAR ' + parseFloat(data.repairs_revenue).toFixed(2);
+        document.getElementById('plTotalRev').innerText = 'QAR ' + parseFloat(data.products_revenue + data.repairs_revenue).toFixed(2);
+
+        document.getElementById('plProdCogs').innerText = 'QAR ' + parseFloat(data.products_cogs).toFixed(2);
+        document.getElementById('plRepCogs').innerText = 'QAR ' + parseFloat(data.repairs_cogs).toFixed(2);
+        document.getElementById('plTotalCogs').innerText = 'QAR ' + parseFloat(data.products_cogs + data.repairs_cogs).toFixed(2);
+
+        document.getElementById('plGrossProfit').innerText = 'QAR ' + parseFloat(data.gross_profit).toFixed(2);
+        document.getElementById('plExpenses').innerText = 'QAR ' + parseFloat(data.expenses).toFixed(2);
+        document.getElementById('plNetProfit').innerText = 'QAR ' + parseFloat(data.net_profit).toFixed(2);
+    }
+</script>
+{% endblock %}

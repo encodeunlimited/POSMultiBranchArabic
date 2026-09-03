@@ -1,0 +1,22 @@
+
+
+# --- Block direct access to sensitive files everywhere ---
+<FilesMatch "\.(phar|sqlite|db|env|log|json|lock|sh|bak|ini|md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# --- Block access to hidden dot-files (.git, .github, etc.) ---
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+
+
+# --- Route all traffic through public/ directory ---
+<IfModule mod_rewrite.c>
+    RewriteEngine on
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
