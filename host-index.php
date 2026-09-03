@@ -10,11 +10,8 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// Define absolute path to database in Hostinger (relative to public_html)
-// Hostinger typically places public_html inside the domain directory.
-// We'll store the database one level above public_html to keep it secure.
-define('DB_PATH', dirname(__DIR__) . '/database.sqlite');
-define('TWIG_CACHE_PATH', dirname(__DIR__) . '/twig_cache');
+define('DB_PATH', __DIR__ . '/database.sqlite');
+define('TWIG_CACHE_PATH', __DIR__ . '/twig_cache');
 
 // Ensure Twig cache directory exists
 if (!is_dir(TWIG_CACHE_PATH)) {
