@@ -50,7 +50,7 @@ jobs:
           username: u600962660.mobileadmin
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy_package/
-          server-dir: /domains/mbpos.encodeunlimited.com/public_html/
+          server-dir: /
           exclude: |
             **/.git*
             **/.git*/**
