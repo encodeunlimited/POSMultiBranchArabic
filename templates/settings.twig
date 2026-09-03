@@ -429,6 +429,7 @@
 <script>
 function switchTab(tab) {
     const tabs = ['identity', 'staff', 'branches'];
+    localStorage.setItem('settingsActiveTab', tab);
     
     tabs.forEach(t => {
         const tabBtn = document.getElementById('tab-' + t);
@@ -452,6 +453,15 @@ function switchTab(tab) {
         activeSection.classList.remove('hidden');
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTab = localStorage.getItem('settingsActiveTab');
+    if (savedTab) {
+        switchTab(savedTab);
+    } else {
+        switchTab('identity'); // Default to identity
+    }
+});
 
 function toggleBranchField(selectEl) {
     const role = selectEl.value;
