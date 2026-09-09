@@ -63,6 +63,51 @@ function isAdmin() {
     return in_array($_SESSION['user']['role'] ?? '', ['Admin', 'Owner']);
 }
 
+function getOverdueCreditAlerts($pdo, $customerId = null) {
+    $alerts = [];
+    if ($customerId) {
+        $stmtC = $pdo->prepare("SELECT id, name, balance FROM customers WHERE id = ? AND balance > 0");
+        $stmtC->execute([$customerId]);
+    } else {
+        $stmtC = $pdo->query("SELECT id, name, balance FROM customers WHERE balance > 0");
+    }
+    
+    while ($c = $stmtC->fetch(PDO::FETCH_ASSOC)) {
+        $remBal = (float)$c['balance'];
+        
+        $stmtS = $pdo->prepare("SELECT invoice_id, due, sale_date FROM sales WHERE customer_id = ? AND payment_method = 'Credit' AND status != 'Voided' AND due > 0 ORDER BY sale_date DESC");
+        $stmtS->execute([$c['id']]);
+        $sales = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($sales as $sale) {
+            if ($remBal <= 0) break;
+            $amtOwed = min((float)$sale['due'], $remBal);
+            $remBal -= $amtOwed;
+            
+            $sDate = new DateTime($sale['sale_date']);
+            $now = new DateTime();
+            $days = $now->diff($sDate)->days;
+            
+            if ($days >= 27) {
+                $alerts[] = [
+                    'customer_id' => $c['id'],
+                    'customer_name' => $c['name'],
+                    'invoice_id' => $sale['invoice_id'],
+                    'amount_owed' => $amtOwed,
+                    'days_elapsed' => $days,
+                    'sale_date' => $sale['sale_date']
+                ];
+            }
+        }
+    }
+    
+    usort($alerts, function($a, $b) {
+        return $b['days_elapsed'] <=> $a['days_elapsed'];
+    });
+    
+    return $alerts;
+}
+
 // Make branch info available globally in templates
 $twig->getEnvironment()->addGlobal('active_branch_id', $_SESSION['active_branch_id'] ?? null);
 
@@ -348,11 +393,17 @@ $app->get('/', function (Request $request, Response $response, $args) use ($pdo)
         $low_stock_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    $credit_alerts = [];
+    if (in_array($role, ['Admin', 'Owner'])) {
+        $credit_alerts = getOverdueCreditAlerts($pdo);
+    }
+
     $view = Twig::fromRequest($request);
     return $view->render($response, 'dashboard.twig', [
         'stats' => $stats,
         'low_stock_items' => $low_stock_items,
         'branch_stats' => $branch_stats,
+        'credit_alerts' => $credit_alerts,
         'active_menu' => 'dashboard',
         'start_date' => $startDate,
         'end_date' => $endDate
@@ -673,11 +724,26 @@ $app->get('/pos', function (Request $request, Response $response, $args) use ($p
     $stmtUnits = $pdo->query('SELECT name FROM units WHERE allow_fractional = 1');
     $fractional_units = $stmtUnits->fetchAll(PDO::FETCH_COLUMN);
 
+    // Fetch customers
+    $stmtCust = $pdo->query('SELECT * FROM customers ORDER BY name ASC');
+    $customers = $stmtCust->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch exchange items if requested
+    $exchangeSaleId = $request->getQueryParams()['exchange_sale_id'] ?? null;
+    $exchangeItems = null;
+    if ($exchangeSaleId) {
+        $stmtEx = $pdo->prepare('SELECT p.id, p.name, p.unit, si.quantity, si.price FROM sale_items si JOIN products p ON si.product_id = p.id WHERE si.sale_id = ?');
+        $stmtEx->execute([$exchangeSaleId]);
+        $exchangeItems = $stmtEx->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     $view = Twig::fromRequest($request);
     return $view->render($response, 'pos.twig', [
         'products' => $products,
         'categories' => $categories,
         'fractional_units' => $fractional_units,
+        'customers' => $customers,
+        'exchange_items' => $exchangeItems,
         'active_menu' => 'pos',
         'active_shift' => $activeShift ?: null,
         'needs_branch_selection' => false
@@ -757,9 +823,9 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
     $totalCost = 0;
     foreach ($cart as $item) {
         $id       = (int)($item['id'] ?? 0);
-        $qty      = (int)($item['quantity'] ?? 0);
+        $qty      = (float)($item['quantity'] ?? 0);
         $price    = (float)($item['price'] ?? 0);
-        if ($id <= 0 || $qty <= 0 || $price < 0) {
+        if ($id <= 0 || $qty == 0 || $price < 0) {
             $response->getBody()->write(json_encode(['success' => false, 'message' => 'Invalid item in cart.']));
             return $response->withHeader('Content-Type', 'application/json');
         }
@@ -804,7 +870,9 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
         }
 
         $total = $subtotal - $discount;
-        if ($total < 0) $total = 0;
+        if ($total < 0) {
+            throw new Exception("Exchange total cannot be negative. No cash returns allowed.");
+        }
         $total = round($total, 2);
         
         $paid = $total;
@@ -830,13 +898,13 @@ $app->post('/pos/checkout', function (Request $request, Response $response, $arg
         $stmtUpdateStock = $pdo->prepare('UPDATE branch_stock SET stock_count = stock_count - ? WHERE product_id = ? AND branch_id = ?');
 
         foreach ($cart as $item) {
-            $stmtItem->execute([$saleId, (int)$item['id'], (int)$item['quantity'], (float)$item['price']]);
-            $stmtUpdateStock->execute([(int)$item['quantity'], (int)$item['id'], $branchId]);
+            $stmtItem->execute([$saleId, (int)$item['id'], (float)$item['quantity'], (float)$item['price']]);
+            $stmtUpdateStock->execute([(float)$item['quantity'], (int)$item['id'], $branchId]);
         }
         
         // Update Customer Balance and Loyalty
         if ($customerId) {
-            $pointsEarned = floor($total); // 1 point per QAR spent
+            $pointsEarned = floor($total / 10); // 1 point per 10 QAR spent
             
             $stmtCust = $pdo->prepare('UPDATE customers SET balance = balance + ?, loyalty_points = loyalty_points - ? + ? WHERE id = ?');
             $stmtCust->execute([$due, $pointsApplied, $pointsEarned, $customerId]);
@@ -1825,13 +1893,16 @@ $app->get('/customers/view/{id}', function (Request $request, Response $response
     $stmtP = $pdo->prepare('SELECT p.*, u.username as cashier_name FROM customer_payments p LEFT JOIN users u ON p.created_by = u.id WHERE p.customer_id = ? ORDER BY p.date DESC');
     $stmtP->execute([$id]);
     $payments = $stmtP->fetchAll(PDO::FETCH_ASSOC);
+
+    $credit_alerts = getOverdueCreditAlerts($pdo, $id);
     
     $view = Twig::fromRequest($request);
     return $view->render($response, 'customer_profile.twig', [
         'active_menu' => 'customers',
         'customer' => $customer,
         'sales' => $sales,
-        'payments' => $payments
+        'payments' => $payments,
+        'credit_alerts' => $credit_alerts
     ]);
 })->add($roleMiddleware(['Admin', 'Owner', 'Stock Manager', 'Cashier']));
 

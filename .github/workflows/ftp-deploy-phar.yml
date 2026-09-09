@@ -51,7 +51,7 @@ jobs:
         with:
           server: 45.130.228.109
           username: u600962660.mbposadmin
-          password: ${{ secrets.FTP_PASSWORD }}
+          password: ${{ secrets.FTP_PASSWORD_2 }}
           local-dir: ./deploy_package/
           server-dir: /
           exclude: |

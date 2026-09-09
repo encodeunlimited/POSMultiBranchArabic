@@ -94,6 +94,13 @@
                 </div>
                 <input type="text" id="posSearch" placeholder="Search products..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
             </div>
+            <label class="flex items-center cursor-pointer gap-2 select-none" title="Enable to add items as Returns (negative qty)">
+                <div class="relative">
+                    <input type="checkbox" id="exchangeModeToggle" class="sr-only peer">
+                    <div class="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </div>
+                <span class="text-sm font-bold text-slate-600">Exchange</span>
+            </label>
         </div>
 
         <!-- Category Pills -->
@@ -220,8 +227,11 @@
                             </div>
                             <p class="mb-1">THANK YOU</p>
                             <p class="mb-2 uppercase">Thanks For Coming To Our Store</p>
-                            <div class="border-t border-slate-900 pt-2 pb-2 leading-tight">
+                            <div class="border-t border-slate-900 pt-2 pb-1 leading-tight">
                                 Shop No 02, Umm Al Dome Street.<br>Al Muaither
+                            </div>
+                            <div class="border-t border-slate-900 pt-1 pb-2 leading-tight text-[10px] uppercase">
+                                Note: Selling item should be returned within 24hrs for exchange.
                             </div>
                         </div>
                     </div>
@@ -477,13 +487,21 @@
                 showToast('Customer added!', 'success');
                 // Add to select
                 const select = document.getElementById('posCustomerSelect');
+                const text = `${data.name} (${data.phone})`;
+                
                 const option = document.createElement('option');
                 option.value = result.id;
                 option.dataset.name = data.name;
                 option.dataset.points = '0';
-                option.text = `${data.name} (${data.phone})`;
+                option.text = text;
                 select.appendChild(option);
-                select.value = result.id;
+                
+                if (select.tomselect) {
+                    select.tomselect.addOption({value: result.id, text: text});
+                    select.tomselect.setValue(result.id);
+                } else {
+                    select.value = result.id;
+                }
                 
                 closeQuickCustomerModal();
                 handleCustomerSelect();
@@ -559,7 +577,27 @@
     }
 
     // Minimal POS Cart Logic
-    let cart = [];
+    let cart = [
+        {% if exchange_items %}
+            {% for item in exchange_items %}
+            {
+                id: {{ item.id }},
+                name: "{{ item.name|e('js') }}",
+                price: {{ item.price }},
+                cost: 0,
+                unit: "{{ item.unit }}",
+                quantity: -{{ item.quantity }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        {% endif %}
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if exchange_items %}
+            document.getElementById('exchangeModeToggle').checked = true;
+            updateCartUI();
+        {% endif %}
+    });
 
     function updateCartUI() {
         const emptyState = document.getElementById('emptyCartState');
@@ -652,27 +690,38 @@
     }
 
         function addToCart(id, name, price, cost = 0, unit = 'PCS', qty = null) {
-        if (qty === null && fractionalUnits.includes(unit)) {
-            // Show prompt
-            pendingCartItem = { id, name, price, cost, unit };
-            document.getElementById('qtyPromptProductName').innerText = name;
-            document.getElementById('qtyPromptUnit').innerText = unit;
-            document.getElementById('qtyPromptInput').value = '1';
-            document.getElementById('quantityPromptModal').classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('qtyPromptInput').focus();
-                document.getElementById('qtyPromptInput').select();
-            }, 100);
-            return;
+        let finalQty = qty !== null ? parseFloat(qty) : 1;
+        
+        if (qty === null) {
+            const isExchange = document.getElementById('exchangeModeToggle')?.checked;
+            if (isExchange) finalQty = -1;
+            
+            if (fractionalUnits.includes(unit)) {
+                // Show prompt
+                pendingCartItem = { id, name, price, cost, unit, isExchange };
+                document.getElementById('qtyPromptProductName').innerText = name + (isExchange ? ' (RETURN)' : '');
+                document.getElementById('qtyPromptUnit').innerText = unit;
+                document.getElementById('qtyPromptInput').value = '1';
+                document.getElementById('quantityPromptModal').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('qtyPromptInput').focus();
+                    document.getElementById('qtyPromptInput').select();
+                }, 100);
+                return;
+            }
         }
 
-        const finalQty = qty !== null ? parseFloat(qty) : 1;
         const existingItem = cart.find(i => i.id === id);
         
         if (existingItem) {
             existingItem.quantity += finalQty;
+            if (existingItem.quantity === 0) {
+                cart = cart.filter(i => i.id !== id);
+            }
         } else {
-            cart.push({ id, name, price, cost, unit, quantity: finalQty });
+            if (finalQty !== 0) {
+                cart.push({ id, name, price, cost, unit, quantity: finalQty });
+            }
         }
         updateCartUI();
     }
@@ -681,7 +730,8 @@
         if (!pendingCartItem) return;
         const qty = parseFloat(document.getElementById('qtyPromptInput').value);
         if (qty > 0) {
-            addToCart(pendingCartItem.id, pendingCartItem.name, pendingCartItem.price, pendingCartItem.cost, pendingCartItem.unit, qty);
+            const finalQty = pendingCartItem.isExchange ? -qty : qty;
+            addToCart(pendingCartItem.id, pendingCartItem.name, pendingCartItem.price, pendingCartItem.cost, pendingCartItem.unit, finalQty);
         }
         document.getElementById('quantityPromptModal').classList.add('hidden');
         pendingCartItem = null;
@@ -694,9 +744,8 @@
     }
 
     function updateQty(index, change) {
-        if (cart[index].quantity + change > 0) {
-            cart[index].quantity += change;
-        } else {
+        cart[index].quantity += change;
+        if (cart[index].quantity === 0) {
             removeFromCart(index);
             return;
         }
@@ -712,8 +761,13 @@
 
     function processCheckout() {
         if (cart.length === 0) return;
-        const total = document.getElementById('cartTotal').innerText;
-        document.getElementById('modalTotalDue').innerText = 'QAR ' + total;
+        const totalVal = parseFloat(document.getElementById('cartTotal').innerText) || 0;
+        if (totalVal < 0) {
+            showToast('Exchange total cannot be negative. No cash returns allowed.', 'warning');
+            return;
+        }
+        window.currentTotal = totalVal;
+        document.getElementById('modalTotalDue').innerText = 'QAR ' + totalVal.toFixed(2);
         document.getElementById('checkoutModal').classList.remove('hidden');
         document.getElementById('checkoutModal').classList.add('flex');
         
@@ -723,7 +777,13 @@
         document.getElementById('splitCash').value = '0';
         document.getElementById('splitCard').value = '0';
         document.getElementById('splitFawran').value = '0';
-        document.getElementById('posCustomerSelect').value = '';
+        
+        const customerSelect = document.getElementById('posCustomerSelect');
+        if (customerSelect.tomselect) {
+            customerSelect.tomselect.setValue('');
+        } else {
+            customerSelect.value = '';
+        }
         handleCustomerSelect();
         
         document.querySelector('input[name="payment_method"][value="Cash"]').checked = true;
@@ -1008,6 +1068,74 @@
         });
     }
 
+    function processScannedBarcode(scanned, inputEl = null) {
+        if (!scanned) return;
+        scanned = scanned.toLowerCase();
+        
+        let searchBarcode = scanned;
+        let scaleQty = null;
+
+        // Scale Barcode parsing (e.g. 21 + 5 digit item code + 5 digit weight in grams + 1 check digit)
+        if (/^(20|21|22)\d{11}$/.test(scanned)) {
+            searchBarcode = scanned.substring(2, 7);
+            let weightGrams = parseInt(scanned.substring(7, 12), 10);
+            scaleQty = weightGrams / 1000.0;
+            
+            // Check exchange mode
+            const isExchange = document.getElementById('exchangeModeToggle')?.checked;
+            if (isExchange) {
+                scaleQty = -scaleQty;
+            }
+        }
+        
+        const items = document.querySelectorAll('#posProductGrid > div.pos-product-card');
+        let found = false;
+        
+        for (let item of items) {
+            let dbBarcode = item.dataset.barcode ? item.dataset.barcode.toLowerCase() : '';
+            
+            // Match exact, or matched extracted 5-digit item code
+            if (dbBarcode && (dbBarcode === scanned || dbBarcode === searchBarcode || dbBarcode.replace(/^prd-/, '') === scanned || dbBarcode.replace(/^prd-/, '') === searchBarcode)) {
+                if (scaleQty !== null) {
+                    // Extract attributes to call addToCart directly with qty
+                    const matchFunc = item.getAttribute('onclick').match(/addToCart\((.*?)\)/);
+                    if (matchFunc) {
+                        const argsStr = matchFunc[1];
+                        try {
+                            const argsArray = new Function(`return [${argsStr}]`)();
+                            const itemUnit = (argsArray[4] || 'PCS').toLowerCase();
+                            
+                            // If the item is sold in grams, the quantity should be in grams, not KG
+                            let finalScaleQty = scaleQty;
+                            if (itemUnit === 'g' || itemUnit === 'gram' || itemUnit === 'grams') {
+                                finalScaleQty = scaleQty * 1000;
+                            }
+                            
+                            const evalFunc = new Function(`addToCart(${argsStr}, ${finalScaleQty})`);
+                            evalFunc();
+                        } catch (e) {
+                            console.error('Error parsing scale barcode arguments:', e);
+                            item.click();
+                        }
+                    }
+                } else {
+                    item.click();
+                }
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            showToast('Product not found for barcode: ' + scanned, 'error');
+        }
+        
+        if (inputEl) {
+            inputEl.value = '';
+            inputEl.dispatchEvent(new Event('input'));
+        }
+    }
+
     // Barcode scanner listener
     let barcodeBuffer = "";
     let barcodeTimer = null;
@@ -1016,19 +1144,8 @@
         // If searching and hit enter
         if (e.target.id === 'posSearch' && e.key === 'Enter') {
             e.preventDefault();
-            const query = e.target.value.trim().toLowerCase();
-            if (!query) return;
-            
-            const items = document.querySelectorAll('#posProductGrid > div');
-            for (let item of items) {
-                let dbBarcode = item.dataset.barcode ? item.dataset.barcode.toLowerCase() : '';
-                if (dbBarcode && (dbBarcode === query || dbBarcode.replace(/^prd-/, '') === query)) {
-                    item.click();
-                    e.target.value = '';
-                    e.target.dispatchEvent(new Event('input'));
-                    return;
-                }
-            }
+            const query = e.target.value.trim();
+            processScannedBarcode(query, e.target);
             return;
         }
 
@@ -1043,48 +1160,11 @@
                 barcodeBuffer = "";
             }, 100); // 100ms timeout for scanner speed
         } else if (e.key === 'Enter' && barcodeBuffer.length > 0) {
-            const scanned = barcodeBuffer.toLowerCase();
+            const scanned = barcodeBuffer;
             barcodeBuffer = "";
             if (barcodeTimer) clearTimeout(barcodeTimer);
             
-            let searchBarcode = scanned;
-            let scaleQty = null;
-
-            // Scale Barcode parsing (e.g. 21 + 5 digit item code + 5 digit weight in grams + 1 check digit)
-            if (/^(20|21|22)\d{11}$/.test(scanned)) {
-                searchBarcode = scanned.substring(2, 7);
-                let weightGrams = parseInt(scanned.substring(7, 12), 10);
-                scaleQty = weightGrams / 1000.0;
-            }
-            
-            const items = document.querySelectorAll('#posProductGrid > div.pos-product-card');
-            let found = false;
-            for (let item of items) {
-                let dbBarcode = item.dataset.barcode ? item.dataset.barcode.toLowerCase() : '';
-                
-                // Match exact, or matched extracted 5-digit item code
-                if (dbBarcode && (dbBarcode === scanned || dbBarcode === searchBarcode || dbBarcode.replace(/^prd-/, '') === scanned || dbBarcode.replace(/^prd-/, '') === searchBarcode)) {
-                    if (scaleQty !== null) {
-                        // Extract attributes to call addToCart directly with qty
-                        const matchFunc = item.getAttribute('onclick').match(/addToCart\((.*?)\)/);
-                        if (matchFunc) {
-                            // evaluate the arguments carefully (id, 'name', price, cost, 'unit')
-                            // We can just construct a click event, wait, item.click() doesn't pass qty.
-                            // We must evaluate the args.
-                            const argsStr = matchFunc[1];
-                            const evalFunc = new Function(`addToCart(${argsStr}, ${scaleQty})`);
-                            evalFunc();
-                        }
-                    } else {
-                        item.click();
-                    }
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                showToast('Product not found for barcode: ' + scanned, 'error');
-            }
+            processScannedBarcode(scanned);
         }
     });
 
