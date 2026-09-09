@@ -82,7 +82,7 @@
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h3 id="modalTitle" class="text-lg font-bold text-slate-900">Add Customer</h3>
-            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+            <button onclick="closeCustModal()" class="text-slate-400 hover:text-slate-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
@@ -105,7 +105,7 @@
                 <textarea name="address" id="custAddress" rows="2" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></textarea>
             </div>
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
+                <button type="button" onclick="closeCustModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
                 <button type="submit" class="px-4 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md shadow-indigo-200">Save Customer</button>
             </div>
         </form>
@@ -117,17 +117,17 @@
         new TailwindDataTable('custTable', 'custSearch', 'custCount');
     });
 
-    const modal = document.getElementById('custModal');
-    const form = document.getElementById('custForm');
+    const custModalEl = document.getElementById('custModal');
+    const custFormEl = document.getElementById('custForm');
     let isEdit = false;
 
     function openAddModal() {
         isEdit = false;
-        form.reset();
+        custFormEl.reset();
         document.getElementById('custId').value = '';
         document.getElementById('modalTitle').innerText = 'Add Customer';
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        custModalEl.classList.remove('hidden');
+        custModalEl.classList.add('flex');
     }
 
     function openEditModal(customer) {
@@ -138,20 +138,20 @@
         document.getElementById('custEmail').value = customer.email || '';
         document.getElementById('custAddress').value = customer.address || '';
         document.getElementById('modalTitle').innerText = 'Edit Customer';
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        custModalEl.classList.remove('hidden');
+        custModalEl.classList.add('flex');
     }
 
-    function closeModal() {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+    function closeCustModal() {
+        custModalEl.classList.add('hidden');
+        custModalEl.classList.remove('flex');
     }
 
-    form.addEventListener('submit', async (e) => {
+    custFormEl.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('custId').value;
         const url = isEdit ? '/customers/edit/' + id : '/customers/add';
-        const formData = new FormData(form);
+        const formData = new FormData(custFormEl);
         const data = Object.fromEntries(formData.entries());
 
         try {

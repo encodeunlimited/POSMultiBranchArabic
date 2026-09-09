@@ -1770,7 +1770,8 @@ $app->post('/customers/add', function (Request $request, Response $response, $ar
         $data['address'] ?? ''
     ]);
     
-    $response->getBody()->write(json_encode(['success' => true]));
+    $id = $pdo->lastInsertId();
+    $response->getBody()->write(json_encode(['success' => true, 'id' => $id]));
     return $response->withHeader('Content-Type', 'application/json');
 });
 
