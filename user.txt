@@ -4,3 +4,5 @@
     ['username' => 'cashier2', 'password' => '123', 'role' => 'Cashier', 'branch_id' => $branch2],
     ['username' => 'manager1', 'password' => '123', 'role' => 'Stock Manager', 'branch_id' => $branch1],
     ['username' => 'manager2', 'password' => '123', 'role' => 'Stock Manager', 'branch_id' => $branch2],
+
+    tttt
