@@ -12,47 +12,47 @@
     <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div class="flex flex-col md:flex-row gap-4">
             <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{{ __('Start Date') }}</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Start Date</label>
                 <input type="date" id="startDate" class="w-full md:w-auto px-4 py-2 border rounded-xl bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow">
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{{ __('End Date') }}</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">End Date</label>
                 <input type="date" id="endDate" class="w-full md:w-auto px-4 py-2 border rounded-xl bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow">
             </div>
         </div>
         <button onclick="fetchReports()" id="generateBtn" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 justify-center shadow-sm">
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i> {{ __('Generate Report') }}
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Generate Report
         </button>
     </div>
 
     <!-- Tab Navigation -->
     <div class="flex gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar">
-        <button onclick="switchTab('sales')" id="tab-sales" class="px-5 py-3 font-semibold text-sm border-b-2 border-indigo-600 text-indigo-700 transition-colors whitespace-nowrap">{{ __('Sales Report') }}</button>
-        <button onclick="switchTab('inventory')" id="tab-inventory" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">{{ __('Inventory & Stock') }}</button>
-        <button onclick="switchTab('pl')" id="tab-pl" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">{{ __('Profit & Loss') }}</button>
+        <button onclick="switchTab('sales')" id="tab-sales" class="px-5 py-3 font-semibold text-sm border-b-2 border-indigo-600 text-indigo-700 transition-colors whitespace-nowrap">Sales Report</button>
+        <button onclick="switchTab('inventory')" id="tab-inventory" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Inventory & Stock</button>
+        <button onclick="switchTab('pl')" id="tab-pl" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Profit & Loss</button>
         
-        <button onclick="switchTab('shifts')" id="tab-shifts" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">{{ __('Shifts Report') }}</button>
+        <button onclick="switchTab('shifts')" id="tab-shifts" class="px-5 py-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap">Shifts Report</button>
     </div>
 
     <!-- Loading State -->
     <div id="loadingState" class="hidden py-12 flex flex-col items-center justify-center text-slate-400">
         <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-4 text-indigo-500"></i>
-        <p class="font-medium">{{ __('Crunching the numbers...') }}</p>
+        <p class="font-medium">Crunching the numbers...</p>
     </div>
 
     <!-- SALES TAB -->
     <div id="content-sales" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
-                <p class="text-indigo-100 text-sm font-bold uppercase tracking-wider mb-1">{{ __('Total Revenue') }}</p>
-                <h2 class="text-4xl font-black" id="salesTotalRevenue">{{ __('QAR 0.00') }}</h2>
+                <p class="text-indigo-100 text-sm font-bold uppercase tracking-wider mb-1">Total Revenue</p>
+                <h2 class="text-4xl font-black" id="salesTotalRevenue">QAR 0.00</h2>
                 <div class="absolute right-0 bottom-0 opacity-10">
                     <i data-lucide="trending-up" class="w-32 h-32 -mb-6 -mr-6"></i>
                 </div>
             </div>
             <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                 <div>
-                    <p class="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">{{ __('Total Transactions') }}</p>
+                    <p class="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Transactions</p>
                     <h2 class="text-3xl font-black text-slate-800" id="salesTotalTx">0</h2>
                 </div>
                 <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
@@ -64,7 +64,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Payment Methods Chart -->
             <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-5 h-5 text-indigo-500"></i> {{ __('Revenue by Payment Method') }}</h3>
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-5 h-5 text-indigo-500"></i> Revenue by Payment Method</h3>
                 <div class="relative h-64 w-full flex items-center justify-center">
                     <canvas id="paymentChart"></canvas>
                 </div>
@@ -73,15 +73,15 @@
             <!-- Cashier Performance -->
             <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                 <div class="p-6 border-b border-slate-100">
-                    <h3 class="font-bold text-slate-800 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-indigo-500"></i> {{ __('Cashier Performance') }}</h3>
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-indigo-500"></i> Cashier Performance</h3>
                 </div>
                 <div class="flex-1 overflow-auto p-4">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                                <th class="pb-3 font-semibold">{{ __('Cashier') }}</th>
-                                <th class="pb-3 font-semibold text-right">{{ __('Transactions') }}</th>
-                                <th class="pb-3 font-semibold text-right">{{ __('Total Sold') }}</th>
+                                <th class="pb-3 font-semibold">Cashier</th>
+                                <th class="pb-3 font-semibold text-right">Transactions</th>
+                                <th class="pb-3 font-semibold text-right">Total Sold</th>
                             </tr>
                         </thead>
                         <tbody id="cashierTableBody" class="text-sm">
@@ -97,29 +97,29 @@
     <div id="content-inventory" class="hidden space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{{ __('Total Stock Items') }}</p>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Stock Items</p>
                 <h2 class="text-3xl font-black text-slate-800" id="invTotalItems">0</h2>
             </div>
             <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-4 border-l-rose-500">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{{ __('Total Inventory Cost') }}</p>
-                <h2 class="text-2xl font-bold text-rose-600" id="invTotalCost">{{ __('QAR 0.00') }}</h2>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Inventory Cost</p>
+                <h2 class="text-2xl font-bold text-rose-600" id="invTotalCost">QAR 0.00</h2>
             </div>
             <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-4 border-l-emerald-500">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{{ __('Total Retail Value') }}</p>
-                <h2 class="text-2xl font-bold text-emerald-600" id="invTotalRetail">{{ __('QAR 0.00') }}</h2>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Retail Value</p>
+                <h2 class="text-2xl font-bold text-emerald-600" id="invTotalRetail">QAR 0.00</h2>
             </div>
         </div>
 
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="p-6 border-b border-slate-100 bg-rose-50/30">
-                <h3 class="font-bold text-rose-700 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> {{ __('Low Stock Alert (Bottom 10)') }}</h3>
+                <h3 class="font-bold text-rose-700 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> Low Stock Alert (Bottom 10)</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm whitespace-nowrap">
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                            <th class="px-6 py-3">{{ __('Product Name') }}</th>
-                            <th class="px-6 py-3">{{ __('Current Stock') }}</th>
+                            <th class="px-6 py-3">Product Name</th>
+                            <th class="px-6 py-3">Current Stock</th>
                         </tr>
                     </thead>
                     <tbody id="lowStockTableBody" class="divide-y divide-slate-100">
@@ -136,20 +136,20 @@
     <div id="content-shifts" class="hidden space-y-6">
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="p-6 border-b border-slate-100 bg-indigo-50/30">
-                <h3 class="font-bold text-indigo-700 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> {{ __('Shift Logs') }}</h3>
+                <h3 class="font-bold text-indigo-700 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> Shift Logs</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm whitespace-nowrap">
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                            <th class="px-6 py-3">{{ __('Cashier') }}</th>
-                            <th class="px-6 py-3">{{ __('Start Time') }}</th>
-                            <th class="px-6 py-3">{{ __('End Time') }}</th>
-                            <th class="px-6 py-3 text-right">{{ __('Start Cash') }}</th>
-                            <th class="px-6 py-3 text-right">{{ __('Cash Sales') }}</th>
-                            <th class="px-6 py-3 text-right">{{ __('Expected') }}</th>
-                            <th class="px-6 py-3 text-right">{{ __('Actual Ending') }}</th>
-                            <th class="px-6 py-3 text-center">{{ __('Status') }}</th>
+                            <th class="px-6 py-3">Cashier</th>
+                            <th class="px-6 py-3">Start Time</th>
+                            <th class="px-6 py-3">End Time</th>
+                            <th class="px-6 py-3 text-right">Start Cash</th>
+                            <th class="px-6 py-3 text-right">Cash Sales</th>
+                            <th class="px-6 py-3 text-right">Expected</th>
+                            <th class="px-6 py-3 text-right">Actual Ending</th>
+                            <th class="px-6 py-3 text-center">Status</th>
                         </tr>
                     </thead>
                     <tbody id="shiftsTableBody" class="divide-y divide-slate-100">
@@ -164,64 +164,64 @@
     <div id="content-pl" class="hidden space-y-6">
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 lg:p-8 max-w-3xl mx-auto">
             <div class="text-center mb-8">
-                <h2 class="text-2xl font-black text-slate-900">{{ __('Profit & Loss Statement') }}</h2>
-                <p class="text-sm text-slate-500 font-medium mt-1">{{ __('For period:') }} <span id="plDateRange"></span></p>
+                <h2 class="text-2xl font-black text-slate-900">Profit & Loss Statement</h2>
+                <p class="text-sm text-slate-500 font-medium mt-1">For period: <span id="plDateRange"></span></p>
             </div>
 
             <div class="space-y-4 text-sm font-medium">
                 <!-- Revenue -->
                 <div class="border-b border-slate-200 pb-2">
-                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">{{ __('Revenue') }}</h4>
+                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">Revenue</h4>
                     <div class="flex justify-between py-1 text-slate-600">
-                        <span>{{ __('Product Sales Revenue') }}</span>
-                        <span id="plProdRev">{{ __('QAR 0.00') }}</span>
+                        <span>Product Sales Revenue</span>
+                        <span id="plProdRev">QAR 0.00</span>
                     </div>
                     <div class="flex justify-between py-1 text-slate-600">
-                        <span>{{ __('Repair Services Revenue') }}</span>
-                        <span id="plRepRev">{{ __('QAR 0.00') }}</span>
+                        <span>Repair Services Revenue</span>
+                        <span id="plRepRev">QAR 0.00</span>
                     </div>
                 </div>
                 <div class="flex justify-between py-2 text-slate-900 font-bold text-base bg-slate-50 px-3 -mx-3 rounded-lg">
-                    <span>{{ __('Total Revenue') }}</span>
-                    <span id="plTotalRev">{{ __('QAR 0.00') }}</span>
+                    <span>Total Revenue</span>
+                    <span id="plTotalRev">QAR 0.00</span>
                 </div>
 
                 <!-- COGS -->
                 <div class="border-b border-slate-200 pb-2 mt-6">
-                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">{{ __('Cost of Goods Sold (COGS)') }}</h4>
+                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">Cost of Goods Sold (COGS)</h4>
                     <div class="flex justify-between py-1 text-rose-600">
-                        <span>{{ __('Cost of Products Sold') }}</span>
-                        <span id="plProdCogs">{{ __('QAR 0.00') }}</span>
+                        <span>Cost of Products Sold</span>
+                        <span id="plProdCogs">QAR 0.00</span>
                     </div>
                     <div class="flex justify-between py-1 text-rose-600">
-                        <span>{{ __('Direct Repair Costs') }}</span>
-                        <span id="plRepCogs">{{ __('QAR 0.00') }}</span>
+                        <span>Direct Repair Costs</span>
+                        <span id="plRepCogs">QAR 0.00</span>
                     </div>
                 </div>
                 <div class="flex justify-between py-2 text-rose-700 font-bold text-base bg-rose-50 px-3 -mx-3 rounded-lg">
-                    <span>{{ __('Total COGS') }}</span>
-                    <span id="plTotalCogs">{{ __('QAR 0.00') }}</span>
+                    <span>Total COGS</span>
+                    <span id="plTotalCogs">QAR 0.00</span>
                 </div>
 
                 <!-- Gross Profit -->
                 <div class="flex justify-between py-3 text-indigo-700 font-black text-lg border-b-2 border-indigo-100 mt-2">
-                    <span>{{ __('Gross Profit') }}</span>
-                    <span id="plGrossProfit">{{ __('QAR 0.00') }}</span>
+                    <span>Gross Profit</span>
+                    <span id="plGrossProfit">QAR 0.00</span>
                 </div>
 
                 <!-- Expenses -->
                 <div class="border-b border-slate-200 pb-2 mt-6">
-                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">{{ __('Operating Expenses') }}</h4>
+                    <h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-3">Operating Expenses</h4>
                     <div class="flex justify-between py-1 text-rose-600">
-                        <span>{{ __('General Expenses') }}</span>
-                        <span id="plExpenses">{{ __('QAR 0.00') }}</span>
+                        <span>General Expenses</span>
+                        <span id="plExpenses">QAR 0.00</span>
                     </div>
                 </div>
 
                 <!-- Net Profit -->
                 <div class="flex justify-between items-center py-4 text-emerald-600 font-black text-2xl mt-4 bg-emerald-50 px-4 -mx-4 rounded-xl border border-emerald-100">
-                    <span>{{ __('Net Profit') }}</span>
-                    <span id="plNetProfit">{{ __('QAR 0.00') }}</span>
+                    <span>Net Profit</span>
+                    <span id="plNetProfit">QAR 0.00</span>
                 </div>
             </div>
         </div>
@@ -344,7 +344,7 @@
         const tbody = document.getElementById('cashierTableBody');
         tbody.innerHTML = '';
         if (data.cashiers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-slate-500">{{ __('No sales in this period.') }}</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-slate-500">No sales in this period.</td></tr>';
         } else {
             data.cashiers.sort((a,b) => b.total - a.total).forEach(c => {
                 tbody.innerHTML += `
@@ -366,7 +366,7 @@
         const tbody = document.getElementById('lowStockTableBody');
         tbody.innerHTML = '';
         if (data.low_stock.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-slate-500">{{ __('Inventory is fully stocked!') }}</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-slate-500">Inventory is fully stocked!</td></tr>';
         } else {
             data.low_stock.forEach(item => {
                 const stockClass = item.stock_count <= 0 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700';
@@ -389,7 +389,7 @@
         const tbody = document.getElementById('shiftsTableBody');
         tbody.innerHTML = '';
         if(!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-slate-500">{{ __('No shifts found in this period.') }}</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-slate-500">No shifts found in this period.</td></tr>';
         } else {
             data.forEach(sh => {
                 const startCash = parseFloat(sh.starting_cash || 0);
@@ -397,19 +397,19 @@
                 const expected = startCash + cashSales;
                 const actual = parseFloat(sh.ending_cash || 0);
                 const statusBadge = sh.status === 'Open' 
-                    ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">{{ __('Open') }}</span>'
-                    : '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">{{ __('Closed') }}</span>{{ __('\';
+                    ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Open</span>'
+                    : '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">Closed</span>';
                 
-                let actualClass = \'\';
-                if(sh.status === \'Closed\') {
+                let actualClass = '';
+                if(sh.status === 'Closed') {
                     if (Math.abs(actual - expected) > 0.01) {
-                        actualClass = \'text-rose-600 font-bold\';
+                        actualClass = 'text-rose-600 font-bold';
                     } else {
-                        actualClass = \'text-emerald-600 font-bold\';
+                        actualClass = 'text-emerald-600 font-bold';
                     }
                 }
                 
-                tbody.innerHTML += `') }}
+                tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-3 font-medium text-slate-900">${escapeHtml(sh.cashier_name || 'Unknown')}</td>
                         <td class="px-6 py-3 text-slate-700">${sh.start_time}</td>

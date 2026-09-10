@@ -6,20 +6,20 @@
         <div>
             <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                 <i data-lucide="users" class="w-8 h-8 text-indigo-600"></i>
-                {{ __('Customers') }}
+                Customers
             </h1>
-            <p class="text-slate-500 text-sm mt-1">{{ __('Manage your customer registry.') }}</p>
+            <p class="text-slate-500 text-sm mt-1">Manage your customer registry.</p>
         </div>
         
         <div class="flex items-center gap-3">
             <div class="relative">
                 <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" id="custSearch" placeholder="{{ __('Search customers...') }}" class="pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-64 transition-all bg-white">
+                <input type="text" id="custSearch" placeholder="Search customers..." class="pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-64 transition-all bg-white">
             </div>
             
             <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-200">
                 <i data-lucide="plus" class="w-5 h-5"></i>
-                {{ __('Add Customer') }}
+                Add Customer
             </button>
         </div>
     </div>
@@ -29,11 +29,11 @@
             <table class="w-full text-sm text-left" id="custTable">
                 <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
                     <tr>
-                        <th class="px-6 py-4">{{ __('Name') }}</th>
-                        <th class="px-6 py-4">{{ __('Phone') }}</th>
-                        <th class="px-6 py-4">{{ __('Email') }}</th>
-                        <th class="px-6 py-4">{{ __('Address') }}</th>
-                        <th class="px-6 py-4 text-right">{{ __('Actions') }}</th>
+                        <th class="px-6 py-4">Name</th>
+                        <th class="px-6 py-4">Phone</th>
+                        <th class="px-6 py-4">Email</th>
+                        <th class="px-6 py-4">Address</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -46,7 +46,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex justify-end gap-2">
                                 <a href="/customers/view/{{ c.id }}" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 font-medium text-xs">
-                                    <i data-lucide="user" class="w-4 h-4"></i> {{ __('Profile') }}
+                                    <i data-lucide="user" class="w-4 h-4"></i> Profile
                                 </a>
                                 <button onclick='openEditModal({{ c|json_encode|raw }})' class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-lg transition-colors">
                                     <i data-lucide="edit-2" class="w-4 h-4"></i>
@@ -63,8 +63,8 @@
                     <tr>
                         <td colspan="5" class="px-6 py-12 text-center text-slate-500">
                             <i data-lucide="users" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
-                            <p class="text-lg font-medium text-slate-900 mb-1">{{ __('No Customers Found') }}</p>
-                            <p class="text-sm">{{ __('There are no registered customers yet.') }}</p>
+                            <p class="text-lg font-medium text-slate-900 mb-1">No Customers Found</p>
+                            <p class="text-sm">There are no registered customers yet.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -72,7 +72,7 @@
             </table>
         </div>
         <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-            <span class="text-sm text-slate-500">{{ __('Showing') }} <span id="custCount" class="font-bold text-slate-900">{{ customers|length }}</span> {{ __('records') }}</span>
+            <span class="text-sm text-slate-500">Showing <span id="custCount" class="font-bold text-slate-900">{{ customers|length }}</span> records</span>
         </div>
     </div>
 </div>
@@ -81,7 +81,7 @@
 <div id="custModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 id="modalTitle" class="text-lg font-bold text-slate-900">{{ __('Add Customer') }}</h3>
+            <h3 id="modalTitle" class="text-lg font-bold text-slate-900">Add Customer</h3>
             <button onclick="closeCustModal()" class="text-slate-400 hover:text-slate-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
@@ -89,24 +89,24 @@
         <form id="custForm" class="p-6 space-y-4">
             <input type="hidden" id="custId" name="id">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Name *') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Name *</label>
                 <input type="text" name="name" id="custName" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Phone') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                 <input type="text" name="phone" id="custPhone" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Email') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
                 <input type="email" name="email" id="custEmail" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Address') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Address</label>
                 <textarea name="address" id="custAddress" rows="2" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></textarea>
             </div>
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onclick="closeCustModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">{{ __('Cancel') }}</button>
-                <button type="submit" class="px-4 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md shadow-indigo-200">{{ __('Save Customer') }}</button>
+                <button type="button" onclick="closeCustModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md shadow-indigo-200">Save Customer</button>
             </div>
         </form>
     </div>

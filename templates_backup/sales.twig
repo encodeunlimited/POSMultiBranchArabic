@@ -22,20 +22,20 @@
 
 <div class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 no-print">
     <div>
-        <p class="text-slate-500 text-sm">{{ __('Review past transactions, reprint receipts, or process returns.') }}</p>
+        <p class="text-slate-500 text-sm">Review past transactions, reprint receipts, or process returns.</p>
     </div>
     <div class="flex gap-3">
         <form method="GET" action="/sales" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
     <input type="date" name="start_date" value="{{ start_date }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
-    <span class="text-slate-400 text-sm hidden sm:inline">{{ __('to') }}</span>
+    <span class="text-slate-400 text-sm hidden sm:inline">to</span>
     <input type="date" name="end_date" value="{{ end_date }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
     <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
         <button type="submit" class="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors text-center">
-            {{ __('Filter') }}
+            Filter
         </button>
         {% if start_date %}
         <a href="/sales" class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold shadow-sm hover:bg-slate-200 transition-colors text-center">
-            {{ __('Clear') }}
+            Clear
         </a>
         {% endif %}
     </div>
@@ -50,13 +50,13 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
                 </div>
-                <input type="text" id="salesSearch" placeholder="{{ __('Search by Invoice ID, Cashier, or Customer...') }}" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+                <input type="text" id="salesSearch" placeholder="Search by Invoice ID, Cashier, or Customer..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
             </div>
             <select class="w-full sm:w-auto shrink-0 min-w-[130px] px-4 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500">
-                <option>{{ __('All Time') }}</option>
-                <option>{{ __('Today') }}</option>
-                <option>{{ __('This Week') }}</option>
-                <option>{{ __('This Month') }}</option>
+                <option>All Time</option>
+                <option>Today</option>
+                <option>This Week</option>
+                <option>This Month</option>
             </select>
         </div>
         <div class="w-full md:w-auto px-4 py-2 border border-slate-200 rounded-lg bg-white flex items-center justify-center md:justify-start gap-2 text-sm text-slate-600 font-medium">
@@ -68,20 +68,20 @@
     {% if sales is empty %}
         <div class="p-16 flex flex-col items-center justify-center text-center bg-white">
             <i data-lucide="file-x-2" class="w-12 h-12 text-slate-300 mb-4"></i>
-            <p class="text-slate-500 font-medium">{{ __('No sales records found matching your search.') }}</p>
+            <p class="text-slate-500 font-medium">No sales records found matching your search.</p>
         </div>
     {% else %}
         <div class="overflow-x-auto">
             <table id="salesTable" class="w-full text-left text-sm text-slate-600">
                 <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
                     <tr>
-                        <th class="px-6 py-4">{{ __('Invoice & Date') }}</th>
-                        <th class="px-6 py-4">{{ __('Cashier') }}</th>
-                        <th class="px-6 py-4">{{ __('Branch') }}</th>
-                        <th class="px-6 py-4">{{ __('Status') }}</th>
-                        <th class="px-6 py-4">{{ __('Total (QAR)') }}</th>
-                        <th class="px-6 py-4">{{ __('Paid (QAR)') }}</th>
-                        <th class="px-6 py-4 text-right">{{ __('Actions') }}</th>
+                        <th class="px-6 py-4">Invoice & Date</th>
+                        <th class="px-6 py-4">Cashier</th>
+                        <th class="px-6 py-4">Branch</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Total (QAR)</th>
+                        <th class="px-6 py-4">Paid (QAR)</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white">
@@ -97,29 +97,29 @@
                         </td>
                         <td class="px-6 py-4">
                             {% if sale.status == 'Voided' %}
-                                <span class="px-2 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-md uppercase tracking-wider">{{ __('Voided') }}</span>
+                                <span class="px-2 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-md uppercase tracking-wider">Voided</span>
                             {% else %}
-                                <span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-md uppercase tracking-wider">{{ __('Completed') }}</span>
+                                <span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-md uppercase tracking-wider">Completed</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 font-bold text-slate-900">QAR {{ sale.total|number_format(2) }}</td>
                         <td class="px-6 py-4 text-emerald-600 font-medium">QAR {{ sale.paid|number_format(2) }}</td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-1">
-                                <button onclick="fetchAndShowReceipt({{ sale.id }}, false)" class="text-indigo-600 hover:text-indigo-800 p-1.5 hover:bg-indigo-50 rounded-lg transition-colors" title="{{ __('View Receipt') }}">
+                                <button onclick="fetchAndShowReceipt({{ sale.id }}, false)" class="text-indigo-600 hover:text-indigo-800 p-1.5 hover:bg-indigo-50 rounded-lg transition-colors" title="View Receipt">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                 </button>
-                                <button onclick="fetchAndShowReceipt({{ sale.id }}, true)" class="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded-lg transition-colors" title="{{ __('Print Receipt') }}">
+                                <button onclick="fetchAndShowReceipt({{ sale.id }}, true)" class="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded-lg transition-colors" title="Print Receipt">
                                     <i data-lucide="printer" class="w-4 h-4"></i>
                                 </button>
-                                <button onclick="downloadReceipt({{ sale.id }})" class="text-emerald-600 hover:text-emerald-800 p-1.5 hover:bg-emerald-50 rounded-lg transition-colors" title="{{ __('Download Receipt Text') }}">
+                                <button onclick="downloadReceipt({{ sale.id }})" class="text-emerald-600 hover:text-emerald-800 p-1.5 hover:bg-emerald-50 rounded-lg transition-colors" title="Download Receipt Text">
                                     <i data-lucide="download" class="w-4 h-4"></i>
                                 </button>
-                                <a href="/pos?exchange_sale_id={{ sale.id }}" class="text-amber-600 hover:text-amber-800 p-1.5 hover:bg-amber-50 rounded-lg transition-colors" title="{{ __('Exchange Items from this Sale') }}">
+                                <a href="/pos?exchange_sale_id={{ sale.id }}" class="text-amber-600 hover:text-amber-800 p-1.5 hover:bg-amber-50 rounded-lg transition-colors" title="Exchange Items from this Sale">
                                     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                                 </a>
                                 {% if current_user.role == 'Admin' and sale.status != 'Voided' %}
-                                <button onclick="voidSale({{ sale.id }}, '{{ sale.invoice_id }}')" class="text-rose-600 hover:text-rose-800 p-1.5 hover:bg-rose-50 rounded-lg transition-colors" title="{{ __('Void Sale & Restore Stock') }}">
+                                <button onclick="voidSale({{ sale.id }}, '{{ sale.invoice_id }}')" class="text-rose-600 hover:text-rose-800 p-1.5 hover:bg-rose-50 rounded-lg transition-colors" title="Void Sale & Restore Stock">
                                     <i data-lucide="ban" class="w-4 h-4"></i>
                                 </button>
                                 {% endif %}
@@ -137,7 +137,7 @@
 <div id="receiptModal" class="fixed inset-0 bg-slate-900/50 z-[60] hidden items-center justify-center backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]">
         <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 no-print">
-            <h3 class="font-bold text-lg text-slate-800">{{ __('Receipt Details') }}</h3>
+            <h3 class="font-bold text-lg text-slate-800">Receipt Details</h3>
             <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-slate-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
@@ -151,9 +151,9 @@
         </div>
 
         <div class="p-4 border-t border-slate-100 bg-white flex justify-end gap-3 no-print">
-            <button onclick="closeReceiptModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">{{ __('Close') }}</button>
+            <button onclick="closeReceiptModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-medium">Close</button>
             <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center gap-2">
-                <i data-lucide="printer" class="w-4 h-4"></i> {{ __('Print') }}
+                <i data-lucide="printer" class="w-4 h-4"></i> Print
             </button>
         </div>
     </div>
@@ -187,9 +187,9 @@
             const sale = data.sale;
             let html = `
                 <div class="text-center pt-2 pb-2 mx-4 text-slate-900 font-bold">
-                    <h2 class="text-xl uppercase tracking-widest mb-1">{{ __('MUNEEFA TRADING') }}</h2>
+                    <h2 class="text-xl uppercase tracking-widest mb-1">MUNEEFA TRADING</h2>
                     <p class="text-xs mt-1">${sale.sale_date}</p>
-                    <p class="text-xs mt-0.5 font-bold">{{ __('Contact : 7096 4494') }}</p>
+                    <p class="text-xs mt-0.5 font-bold">Contact : 7096 4494</p>
                 </div>
                 
                 <div class="border-t border-b border-dashed border-slate-900 py-1 mx-4 mb-2 text-[11px] font-bold text-slate-900 text-left">
@@ -199,10 +199,10 @@
                 
                 <div class="px-4 relative">
                     <div class="flex justify-between text-[11px] font-bold border-b border-dashed border-slate-900 pb-1 mb-2 text-slate-900">
-                        <span class="w-[45%] text-left">{{ __('Sl.# Item') }}</span>
-                        <span class="w-[15%] text-center">{{ __('Qty') }}</span>
-                        <span class="w-[20%] text-right">{{ __('Rate') }}</span>
-                        <span class="w-[20%] text-right">{{ __('Total') }}</span>
+                        <span class="w-[45%] text-left">Sl.# Item</span>
+                        <span class="w-[15%] text-center">Qty</span>
+                        <span class="w-[20%] text-right">Rate</span>
+                        <span class="w-[20%] text-right">Total</span>
                     </div>
                     
                     <ul class="space-y-1 mb-4 text-[11px] font-bold text-slate-900">
@@ -247,18 +247,18 @@
                     <div class="mt-auto">
                         <div class="border-t border-dashed border-slate-900 pt-1 pb-1">
                             <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
-                                <span>{{ __('Total') }}</span>
+                                <span>Total</span>
                                 <span>${Number(sale.total).toFixed(2)}</span>
                             </div>
                             <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
-                                <span>{{ __('Net Total') }}</span>
+                                <span>Net Total</span>
                                 <span>${Number(sale.total).toFixed(2)}</span>
                             </div>
                         </div>
                         
                         <div class="border-t border-b border-dashed border-slate-900 pt-1 pb-1 mb-2">
                             <div class="flex justify-between text-[11px] text-slate-900 font-bold">
-                                <span>{{ __('Total Qty.') }}</span>
+                                <span>Total Qty.</span>
                                 <span>${totalQty}</span>
                             </div>
                         </div>
@@ -267,17 +267,17 @@
                             <div class="text-left mb-2 uppercase flex flex-col gap-0.5">
                                 <div><span>${sale.payment_method}</span>: <span>${paymentAmountDisplay}</span></div>
                                 ${sale.payment_method === 'Cash' ? `
-                                <div><span>{{ __('TENDERED') }}</span>: <span>${Number(sale.tendered_amount).toFixed(2)}</span></div>
-                                <div><span>{{ __('CHANGE') }}</span>: <span>${Number(sale.change_amount).toFixed(2)}</span></div>
+                                <div><span>TENDERED</span>: <span>${Number(sale.tendered_amount).toFixed(2)}</span></div>
+                                <div><span>CHANGE</span>: <span>${Number(sale.change_amount).toFixed(2)}</span></div>
                                 ` : ''}
                             </div>
-                            <p class="mb-1">{{ __('THANK YOU') }}</p>
-                            <p class="mb-2 uppercase">{{ __('Thanks For Coming To Our Store') }}</p>
+                            <p class="mb-1">THANK YOU</p>
+                            <p class="mb-2 uppercase">Thanks For Coming To Our Store</p>
                             <div class="border-t border-slate-900 pt-2 pb-1 leading-tight">
-                                {{ __('Shop No 02, Umm Al Dome Street.') }}<br>{{ __('Al Muaither') }}
+                                Shop No 02, Umm Al Dome Street.<br>Al Muaither
                             </div>
                             <div class="border-t border-slate-900 pt-1 pb-2 leading-tight text-[10px] uppercase">
-                                {{ __('Note: Selling item should be returned within 24hrs for exchange.') }}
+                                Note: Selling item should be returned within 24hrs for exchange.
                             </div>
                         </div>
                     </div>

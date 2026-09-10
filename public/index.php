@@ -17,9 +17,32 @@ session_start();
 // Create App
 $app = AppFactory::create();
 
+// Language Support
+$_SESSION['lang'] = $_SESSION['lang'] ?? 'en';
+$langArray = [];
+if ($_SESSION['lang'] === 'ar') {
+    if (file_exists(__DIR__ . '/lang.php')) {
+        $langArray = require __DIR__ . '/lang.php';
+    }
+}
+
+if (!function_exists('__')) {
+    function __($text) {
+        global $langArray;
+        return $langArray[$text] ?? $text;
+    }
+}
+
 // Create Twig — use file cache in production (defined in host-index.php), disable in dev
 $twigCache = defined('TWIG_CACHE_PATH') ? TWIG_CACHE_PATH : false;
 $twig = Twig::create(__DIR__ . '/../templates', ['cache' => $twigCache]);
+
+// Add Twig custom function for translation
+$twig->getEnvironment()->addFunction(new \Twig\TwigFunction('__', function ($text) {
+    return __($text);
+}));
+$twig->getEnvironment()->addGlobal('lang', $_SESSION['lang']);
+
 $twig->getEnvironment()->addGlobal('current_user', $_SESSION['user'] ?? null);
 
 // Add Twig-View Middleware
@@ -203,6 +226,18 @@ $app->post('/login', function (Request $request, Response $response, $args) use 
     return $response->withHeader('Location', '/login')->withStatus(302);
 });
 
+$app->get('/lang/{locale}', function (Request $request, Response $response, $args) {
+    $locale = $args['locale'] === 'ar' ? 'ar' : 'en';
+    $_SESSION['lang'] = $locale;
+    
+    // Redirect back
+    $referer = $request->getHeaderLine('Referer');
+    if (empty($referer)) {
+        $referer = '/';
+    }
+    return $response->withHeader('Location', $referer)->withStatus(302);
+});
+
 $app->get('/logout', function (Request $request, Response $response, $args) {
     session_destroy();
     return $response->withHeader('Location', '/login')->withStatus(302);
@@ -306,10 +341,10 @@ $app->get('/', function (Request $request, Response $response, $args) use ($pdo)
         $low_stock_count = $stmt->fetchColumn() ?: 0;
 
         if ($branchId) {
-            $stmt = $pdo->prepare("SELECT p.name, bs.stock_count, bs.min_stock, c.name as category_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock AND bs.branch_id = ? ORDER BY bs.stock_count ASC LIMIT 5");
+            $stmt = $pdo->prepare("SELECT p.name, bs.stock_count, bs.min_stock, c.name as category_name, c.arabic_name as category_arabic_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock AND bs.branch_id = ? ORDER BY bs.stock_count ASC LIMIT 5");
             $stmt->execute([$branchId]);
         } else {
-            $stmt = $pdo->query("SELECT p.name, bs.stock_count, bs.min_stock, c.name as category_name, b.name as branch_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN branches b ON bs.branch_id = b.id WHERE bs.stock_count <= bs.min_stock ORDER BY bs.stock_count ASC LIMIT 5");
+            $stmt = $pdo->query("SELECT p.name, bs.stock_count, bs.min_stock, c.name as category_name, c.arabic_name as category_arabic_name, b.name as branch_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN branches b ON bs.branch_id = b.id WHERE bs.stock_count <= bs.min_stock ORDER BY bs.stock_count ASC LIMIT 5");
         }
         $low_stock_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -388,7 +423,7 @@ $app->get('/', function (Request $request, Response $response, $args) use ($pdo)
         $stmt->execute([$branchId]);
         $stats['low_stock_count'] = $stmt->fetchColumn() ?: 0;
     
-        $stmt = $pdo->prepare("SELECT p.name, bs.stock_count, bs.min_stock, c.name as category_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock AND bs.branch_id = ? ORDER BY bs.stock_count ASC LIMIT 10");
+        $stmt = $pdo->prepare("SELECT p.name, bs.stock_count, bs.min_stock, c.name as category_name, c.arabic_name as category_arabic_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock AND bs.branch_id = ? ORDER BY bs.stock_count ASC LIMIT 10");
         $stmt->execute([$branchId]);
         $low_stock_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -418,7 +453,7 @@ $app->get('/inventory', function (Request $request, Response $response, $args) u
     
     if ($branchId) {
         $stmt = $pdo->prepare('
-            SELECT p.*, c.name as category_name, bs.stock_count as branch_stock, bs.min_stock as branch_min_stock
+            SELECT p.*, c.name as category_name, c.arabic_name as category_arabic_name, bs.stock_count as branch_stock, bs.min_stock as branch_min_stock
             FROM products p 
             LEFT JOIN categories c ON p.category_id = c.id 
             LEFT JOIN branch_stock bs ON p.id = bs.product_id AND bs.branch_id = ?
@@ -428,7 +463,7 @@ $app->get('/inventory', function (Request $request, Response $response, $args) u
     } else {
         // Owner viewing all — show aggregate stock
         $stmt = $pdo->query('
-            SELECT p.*, c.name as category_name, 
+            SELECT p.*, c.name as category_name, c.arabic_name as category_arabic_name, 
                    COALESCE(SUM(bs.stock_count), 0) as branch_stock,
                    MIN(bs.min_stock) as branch_min_stock
             FROM products p 
@@ -508,14 +543,35 @@ $app->post('/inventory/add', function (Request $request, Response $response, $ar
 $app->post('/category/add', function (Request $request, Response $response, $args) use ($pdo) {
     $data = (array)$request->getParsedBody();
     $name = $data['name'] ?? '';
+    $arabic_name = $data['arabic_name'] ?? '';
 
     if (!empty($name)) {
-        $stmt = $pdo->prepare('INSERT INTO categories (name) VALUES (?)');
+        $stmt = $pdo->prepare('INSERT INTO categories (name, arabic_name) VALUES (?, ?)');
         try {
-            $stmt->execute([$name]);
+            $stmt->execute([$name, $arabic_name]);
             $response->getBody()->write(json_encode(['success' => true]));
         } catch (PDOException $e) {
             $response->getBody()->write(json_encode(['success' => false, 'message' => 'Category already exists or error.']));
+        }
+    } else {
+        $response->getBody()->write(json_encode(['success' => false, 'message' => 'Name required.']));
+    }
+    return $response->withHeader('Content-Type', 'application/json');
+})->add($roleMiddleware(['Admin', 'Stock Manager']));
+
+$app->post('/category/edit/{id}', function (Request $request, Response $response, $args) use ($pdo) {
+    $id = $args['id'];
+    $data = (array)$request->getParsedBody();
+    $name = $data['name'] ?? '';
+    $arabic_name = $data['arabic_name'] ?? '';
+
+    if (!empty($name)) {
+        $stmt = $pdo->prepare('UPDATE categories SET name = ?, arabic_name = ? WHERE id = ?');
+        try {
+            $stmt->execute([$name, $arabic_name, $id]);
+            $response->getBody()->write(json_encode(['success' => true]));
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['success' => false, 'message' => 'Error updating category.']));
         }
     } else {
         $response->getBody()->write(json_encode(['success' => false, 'message' => 'Name required.']));
@@ -706,7 +762,7 @@ $app->get('/pos', function (Request $request, Response $response, $args) use ($p
     
     // Fetch products with branch-specific stock
     $stmt = $pdo->prepare('
-        SELECT p.*, c.name as category_name, bs.stock_count as branch_stock
+        SELECT p.*, c.name as category_name, c.arabic_name as category_arabic_name, bs.stock_count as branch_stock
         FROM products p 
         LEFT JOIN categories c ON p.category_id = c.id 
         JOIN branch_stock bs ON p.id = bs.product_id AND bs.branch_id = ?
@@ -928,7 +984,7 @@ $app->get('/expenses', function (Request $request, Response $response, $args) us
     
     if ($branchId) {
         $stmt = $pdo->prepare('
-            SELECT e.*, ec.name as category_name, b.name as branch_name
+            SELECT e.*, ec.name as category_name, c.arabic_name as category_arabic_name, b.name as branch_name
             FROM expenses e 
             LEFT JOIN expense_categories ec ON e.category_id = ec.id 
             LEFT JOIN branches b ON e.branch_id = b.id
@@ -941,7 +997,7 @@ $app->get('/expenses', function (Request $request, Response $response, $args) us
         $stmtTotal->execute([$branchId]);
     } else {
         $stmt = $pdo->query('
-            SELECT e.*, ec.name as category_name, b.name as branch_name
+            SELECT e.*, ec.name as category_name, c.arabic_name as category_arabic_name, b.name as branch_name
             FROM expenses e 
             LEFT JOIN expense_categories ec ON e.category_id = ec.id 
             LEFT JOIN branches b ON e.branch_id = b.id
@@ -1427,10 +1483,10 @@ $app->post('/api/reports', function (Request $request, Response $response, $args
     $inventoryStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($branchId) {
-        $stmt = $pdo->prepare("SELECT p.name, bs.stock_count, c.name as category_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock AND bs.branch_id = ? ORDER BY bs.stock_count ASC LIMIT 10");
+        $stmt = $pdo->prepare("SELECT p.name, bs.stock_count, c.name as category_name, c.arabic_name as category_arabic_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock AND bs.branch_id = ? ORDER BY bs.stock_count ASC LIMIT 10");
         $stmt->execute([$branchId]);
     } else {
-        $stmt = $pdo->query("SELECT p.name, bs.stock_count, c.name as category_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock ORDER BY bs.stock_count ASC LIMIT 10");
+        $stmt = $pdo->query("SELECT p.name, bs.stock_count, c.name as category_name, c.arabic_name as category_arabic_name FROM branch_stock bs JOIN products p ON bs.product_id = p.id LEFT JOIN categories c ON p.category_id = c.id WHERE bs.stock_count <= bs.min_stock ORDER BY bs.stock_count ASC LIMIT 10");
     }
     $lowStock = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1540,7 +1596,7 @@ $app->get('/grn/add', function (Request $request, Response $response, $args) use
     }
     
     $stmt = $pdo->query('
-        SELECT p.*, c.name as category_name
+        SELECT p.*, c.name as category_name, c.arabic_name as category_arabic_name
         FROM products p 
         LEFT JOIN categories c ON p.category_id = c.id
         ORDER BY p.name ASC

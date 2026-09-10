@@ -11,7 +11,7 @@
     <div class="flex gap-3">
         <form method="GET" action="/" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
     <input type="date" name="start_date" value="{{ start_date|default('now'|date('Y-m-01')) }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
-    <span class="text-slate-400 text-sm hidden sm:inline">{{ __('to') }}</span>
+    <span class="text-slate-400 text-sm hidden sm:inline">to</span>
     <input type="date" name="end_date" value="{{ end_date|default('now'|date('Y-m-t')) }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
     <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
         <button type="submit" class="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors text-center">
@@ -100,7 +100,7 @@
     <div class="bg-gradient-to-r from-slate-400 to-slate-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-xs font-bold tracking-wider text-slate-200 mb-1 uppercase">{{ __('Outstanding Dues') }}</p>
+                <p class="text-xs font-bold tracking-wider text-slate-200 mb-1 uppercase">Outstanding Dues</p>
                 <h2 class="text-3xl font-black">QAR {{ stats.outstanding_dues|number_format(0) }}</h2>
             </div>
             <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
@@ -114,7 +114,7 @@
 <!-- Per-Branch Breakdown -->
 <div class="mt-4">
     <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-        <i data-lucide="building-2" class="w-4 h-4"></i> {{ __('Branch Performance') }}
+        <i data-lucide="building-2" class="w-4 h-4"></i> Branch Performance
     </h3>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ branch_stats|length }} gap-4">
         {% for bs in branch_stats %}
@@ -125,21 +125,21 @@
             </div>
             <div class="space-y-2">
                 <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">{{ __('Revenue') }}</span>
+                    <span class="text-slate-500">Revenue</span>
                     <span class="font-bold text-emerald-600">QAR {{ bs.revenue|number_format(0) }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">{{ __('Transactions') }}</span>
+                    <span class="text-slate-500">Transactions</span>
                     <span class="font-bold text-slate-700">{{ bs.transactions }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">{{ __('Stock Units') }}</span>
+                    <span class="text-slate-500">Stock Units</span>
                     <span class="font-bold text-indigo-600">{{ bs.stock|number_format(0) }}</span>
                 </div>
             </div>
             <div class="mt-3 pt-3 border-t border-slate-100">
                 <a href="javascript:switchBranch({{ bs.id }})" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-                    <i data-lucide="external-link" class="w-3 h-3"></i> {{ __('View Branch Details') }}
+                    <i data-lucide="external-link" class="w-3 h-3"></i> View Branch Details
                 </a>
             </div>
         </div>
@@ -151,17 +151,17 @@
 {% if credit_alerts|length > 0 %}
 <div class="mt-6">
     <h3 class="text-sm font-bold text-rose-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-        <i data-lucide="alert-octagon" class="w-4 h-4"></i> {{ __('Overdue Credit Alerts (>= 27 Days)') }}
+        <i data-lucide="alert-octagon" class="w-4 h-4"></i> Overdue Credit Alerts (>= 27 Days)
     </h3>
     <div class="bg-white rounded-xl shadow-sm border border-rose-200 overflow-hidden">
         <table class="w-full text-left text-sm text-slate-600">
             <thead class="bg-rose-50 border-b border-rose-100 text-rose-700">
                 <tr>
-                    <th class="px-4 py-3 font-bold">{{ __('Customer') }}</th>
-                    <th class="px-4 py-3 font-bold">{{ __('Invoice') }}</th>
-                    <th class="px-4 py-3 font-bold">{{ __('Sale Date') }}</th>
-                    <th class="px-4 py-3 font-bold">{{ __('Days Elapsed') }}</th>
-                    <th class="px-4 py-3 font-bold text-right">{{ __('Amount Owed') }}</th>
+                    <th class="px-4 py-3 font-bold">Customer</th>
+                    <th class="px-4 py-3 font-bold">Invoice</th>
+                    <th class="px-4 py-3 font-bold">Sale Date</th>
+                    <th class="px-4 py-3 font-bold">Days Elapsed</th>
+                    <th class="px-4 py-3 font-bold text-right">Amount Owed</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-rose-100">
@@ -193,7 +193,7 @@
     <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-xs font-bold tracking-wider text-blue-100 mb-1 uppercase">{{ __('Period Sales') }}</p>
+                <p class="text-xs font-bold tracking-wider text-blue-100 mb-1 uppercase">Period Sales</p>
                 <h2 class="text-3xl font-black">QAR {{ stats.today_sales|number_format(0) }}</h2>
                 <p class="text-xs text-blue-200 mt-2">{{ stats.today_transactions }} Transactions</p>
             </div>
@@ -205,7 +205,7 @@
     <div class="bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-xs font-bold tracking-wider text-emerald-100 mb-1 uppercase">{{ __('Period Transactions') }}</p>
+                <p class="text-xs font-bold tracking-wider text-emerald-100 mb-1 uppercase">Period Transactions</p>
                 <h2 class="text-3xl font-black">{{ stats.today_transactions }}</h2>
             </div>
             <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
@@ -219,7 +219,7 @@
     <div class="bg-gradient-to-r from-orange-400 to-amber-500 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-xs font-bold tracking-wider text-orange-100 mb-1 uppercase">{{ __('Total Inventory Items') }}</p>
+                <p class="text-xs font-bold tracking-wider text-orange-100 mb-1 uppercase">Total Inventory Items</p>
                 <h2 class="text-3xl font-black">{{ stats.total_inventory }}</h2>
             </div>
             <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
@@ -230,7 +230,7 @@
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-700 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-xs font-bold tracking-wider text-indigo-100 mb-1 uppercase">{{ __('Total Stock Value') }}</p>
+                <p class="text-xs font-bold tracking-wider text-indigo-100 mb-1 uppercase">Total Stock Value</p>
                 <h2 class="text-3xl font-black">QAR {{ stats.inventory_value|number_format(0) }}</h2>
             </div>
             <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
@@ -241,7 +241,7 @@
     <div class="bg-gradient-to-r from-rose-500 to-red-600 rounded-xl p-5 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10 flex justify-between items-start">
             <div>
-                <p class="text-xs font-bold tracking-wider text-rose-100 mb-1 uppercase">{{ __('Low Stock Alerts') }}</p>
+                <p class="text-xs font-bold tracking-wider text-rose-100 mb-1 uppercase">Low Stock Alerts</p>
                 <h2 class="text-3xl font-black">{{ stats.low_stock_count }}</h2>
             </div>
             <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
@@ -260,9 +260,9 @@
         <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 items-start">
             <div class="flex items-center gap-2">
                 <i data-lucide="alert-circle" class="w-5 h-5 text-rose-400 shrink-0"></i>
-                <h3 class="text-lg font-bold text-slate-900">{{ __('Immediate Action Needed') }}</h3>
+                <h3 class="text-lg font-bold text-slate-900">Immediate Action Needed</h3>
             </div>
-            <span class="px-3 py-1 bg-rose-100 text-rose-600 rounded-full text-xs font-black uppercase tracking-wider shrink-0 text-center">{{ __('Low Stock Alerts') }}</span>
+            <span class="px-3 py-1 bg-rose-100 text-rose-600 rounded-full text-xs font-black uppercase tracking-wider shrink-0 text-center">Low Stock Alerts</span>
         </div>
         
         {% if low_stock_items is empty %}
@@ -270,17 +270,17 @@
             <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
                 <i data-lucide="check-circle" class="w-8 h-8 text-emerald-500"></i>
             </div>
-            <h4 class="text-base font-bold text-slate-900 mb-1">{{ __('All Stock Levels Optimal') }}</h4>
-            <p class="text-sm text-slate-500">{{ __('No items are currently running low.') }}</p>
+            <h4 class="text-base font-bold text-slate-900 mb-1">All Stock Levels Optimal</h4>
+            <p class="text-sm text-slate-500">No items are currently running low.</p>
         </div>
         {% else %}
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left">
                 <thead class="text-xs text-slate-500 bg-slate-50/50 uppercase font-bold tracking-wider">
                     <tr>
-                        <th class="px-6 py-4">{{ __('Item Name') }}</th>
-                        <th class="px-6 py-4">{{ __('Category') }}</th>
-                        <th class="px-6 py-4">{{ __('Current Stock') }}</th>
+                        <th class="px-6 py-4">Item Name</th>
+                        <th class="px-6 py-4">Category</th>
+                        <th class="px-6 py-4">Current Stock</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -305,7 +305,7 @@
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <h3 class="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                 <i data-lucide="zap" class="w-5 h-5 text-amber-500"></i>
-                {{ __('Quick Actions') }}
+                Quick Actions
             </h3>
             <div class="space-y-3">
                 {% if current_user.role == 'Admin' or current_user.role == 'Stock Manager' %}
@@ -314,7 +314,7 @@
                     <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
                         <i data-lucide="package-plus" class="w-5 h-5 text-indigo-600 group-hover:text-white transition-colors"></i>
                     </div>
-                    <span class="font-bold text-slate-700 group-hover:text-indigo-900">{{ __('Add Product') }}</span>
+                    <span class="font-bold text-slate-700 group-hover:text-indigo-900">Add Product</span>
                 </div>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
             </a>
@@ -326,7 +326,7 @@
                     <div class="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center group-hover:bg-rose-600 transition-colors">
                         <i data-lucide="receipt" class="w-5 h-5 text-rose-600 group-hover:text-white transition-colors"></i>
                     </div>
-                    <span class="font-bold text-slate-700 group-hover:text-rose-900">{{ __('Record Expense') }}</span>
+                    <span class="font-bold text-slate-700 group-hover:text-rose-900">Record Expense</span>
                 </div>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-rose-600"></i>
             </a>
@@ -341,26 +341,26 @@
             <div class="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                 <i data-lucide="package" class="w-6 h-6 text-indigo-400"></i>
             </div>
-            <h3 class="text-lg font-black text-white mb-1">{{ __('System Ready') }}</h3>
-            <p class="text-slate-400 text-xs mb-5 px-2 leading-relaxed">{{ __('Your POS terminal and database are perfectly synchronized.') }}</p>
+            <h3 class="text-lg font-black text-white mb-1">System Ready</h3>
+            <p class="text-slate-400 text-xs mb-5 px-2 leading-relaxed">Your POS terminal and database are perfectly synchronized.</p>
             
             <div class="w-full space-y-2">
                 <div class="flex justify-between items-center px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                    <span class="text-xs text-slate-300 font-medium">{{ __('Database') }}</span>
+                    <span class="text-xs text-slate-300 font-medium">Database</span>
                     <div class="flex items-center gap-1.5">
                         <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                        <span class="text-[10px] text-emerald-400 font-bold tracking-wider">{{ __('ONLINE') }}</span>
+                        <span class="text-[10px] text-emerald-400 font-bold tracking-wider">ONLINE</span>
                     </div>
                 </div>
                 <div class="flex justify-between items-center px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                    <span class="text-xs text-slate-300 font-medium">{{ __('Expenses') }}</span>
+                    <span class="text-xs text-slate-300 font-medium">Expenses</span>
                     <span class="text-xs text-amber-400 font-bold">QAR {{ stats.total_expenses|number_format(0) }}</span>
                 </div>
                 <div class="flex justify-between items-center px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                    <span class="text-xs text-slate-300 font-medium">{{ __('Storage sync') }}</span>
+                    <span class="text-xs text-slate-300 font-medium">Storage sync</span>
                     <div class="flex items-center gap-1.5">
                         <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                        <span class="text-[10px] text-emerald-400 font-bold tracking-wider">{{ __('SECURE') }}</span>
+                        <span class="text-[10px] text-emerald-400 font-bold tracking-wider">SECURE</span>
                     </div>
                 </div>
             </div>
@@ -380,8 +380,8 @@
                     <i data-lucide="package" class="w-4 h-4 text-indigo-600"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-slate-900">{{ __('Total Inventory Details') }}</h3>
-                    <p class="text-xs text-slate-500">{{ __('Detailed breakdown of records') }}</p>
+                    <h3 class="text-lg font-bold text-slate-900">Total Inventory Details</h3>
+                    <p class="text-xs text-slate-500">Detailed breakdown of records</p>
                 </div>
             </div>
             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
@@ -390,20 +390,20 @@
         </div>
         <div class="p-6 bg-white flex-1 space-y-3">
             <div class="flex justify-between items-center px-6 py-4 bg-slate-50/50 rounded-xl border border-slate-200/50">
-                <span class="text-sm font-bold text-slate-700">{{ __('Total Stock Items') }}</span>
+                <span class="text-sm font-bold text-slate-700">Total Stock Items</span>
                 <span class="text-sm font-black text-slate-800">{{ stats.total_inventory|number_format(0) }} items</span>
             </div>
             <div class="flex justify-between items-center px-6 py-4 bg-amber-50/50 rounded-xl border border-amber-200/50">
-                <span class="text-sm font-bold text-amber-800">{{ __('Low Stock Alerts') }}</span>
+                <span class="text-sm font-bold text-amber-800">Low Stock Alerts</span>
                 <span class="text-sm font-black text-amber-900">{{ stats.low_stock_count }} items</span>
             </div>
             <div class="flex justify-between items-center px-6 py-4 bg-rose-50/50 rounded-xl border border-rose-200/50">
-                <span class="text-sm font-bold text-rose-800">{{ __('Outstanding Dues') }}</span>
+                <span class="text-sm font-bold text-rose-800">Outstanding Dues</span>
                 <span class="text-sm font-black text-rose-900">QAR {{ stats.outstanding_dues|number_format(0) }}</span>
             </div>
         </div>
         <div class="p-4 border-t border-slate-100 flex justify-end bg-white">
-            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">{{ __('Close Window') }}</button>
+            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">Close Window</button>
         </div>
     </div>
 </template>
@@ -416,8 +416,8 @@
                     <i data-lucide="trending-down" class="w-4 h-4 text-indigo-600"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-slate-900">{{ __('Period Expenses Details') }}</h3>
-                    <p class="text-xs text-slate-500">{{ __('Detailed breakdown of records') }}</p>
+                    <h3 class="text-lg font-bold text-slate-900">Period Expenses Details</h3>
+                    <p class="text-xs text-slate-500">Detailed breakdown of records</p>
                 </div>
             </div>
             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
@@ -426,15 +426,15 @@
         </div>
         <div class="p-6 bg-white flex-1 space-y-3">
             <div class="flex justify-between items-center px-6 py-4 bg-rose-50 rounded-xl border border-rose-200 shadow-sm">
-                <span class="text-base font-black text-rose-800">{{ __('Total Period Expenses') }}</span>
+                <span class="text-base font-black text-rose-800">Total Period Expenses</span>
                 <span class="text-lg font-black text-rose-600">QAR {{ stats.total_expenses|number_format(0) }}</span>
             </div>
             <div class="mt-4 text-center">
-                <a href="/expenses" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 underline">{{ __('View Full Expenses Report') }}</a>
+                <a href="/expenses" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 underline">View Full Expenses Report</a>
             </div>
         </div>
         <div class="p-4 border-t border-slate-100 flex justify-end bg-white">
-            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">{{ __('Close Window') }}</button>
+            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">Close Window</button>
         </div>
     </div>
 </template>
@@ -446,8 +446,8 @@
                     <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-600"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-slate-900">{{ __('Period Revenue Details') }}</h3>
-                    <p class="text-xs text-slate-500">{{ __('Detailed breakdown of records') }}</p>
+                    <h3 class="text-lg font-bold text-slate-900">Period Revenue Details</h3>
+                    <p class="text-xs text-slate-500">Detailed breakdown of records</p>
                 </div>
             </div>
             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
@@ -456,7 +456,7 @@
         </div>
         <div class="p-6 bg-white flex-1 space-y-3">
             <div class="flex justify-between items-center px-6 py-4 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
-                <span class="text-sm font-bold text-indigo-800">{{ __('Products Revenue') }}</span>
+                <span class="text-sm font-bold text-indigo-800">Products Revenue</span>
                 <span class="text-sm font-black text-indigo-900">QAR {{ stats.products_revenue|number_format(0) }}</span>
             </div>
 
@@ -464,12 +464,12 @@
             <div class="border-t border-dashed border-slate-200 my-4"></div>
             
             <div class="flex justify-between items-center px-6 py-4 bg-blue-50 rounded-xl border border-blue-200 shadow-sm">
-                <span class="text-base font-black text-blue-800">{{ __('Total Period Revenue') }}</span>
+                <span class="text-base font-black text-blue-800">Total Period Revenue</span>
                 <span class="text-lg font-black text-blue-600">QAR {{ stats.total_revenue|number_format(0) }}</span>
             </div>
         </div>
         <div class="p-4 border-t border-slate-100 flex justify-end bg-white">
-            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">{{ __('Close Window') }}</button>
+            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">Close Window</button>
         </div>
     </div>
 </template>
@@ -482,8 +482,8 @@
                     <i data-lucide="dollar-sign" class="w-4 h-4 text-white"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-slate-900">{{ __('Period Net Profit') }}</h3>
-                    <p class="text-xs text-slate-500">{{ __('Detailed breakdown of records') }}</p>
+                    <h3 class="text-lg font-bold text-slate-900">Period Net Profit</h3>
+                    <p class="text-xs text-slate-500">Detailed breakdown of records</p>
                 </div>
             </div>
             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
@@ -492,27 +492,27 @@
         </div>
         <div class="p-6 bg-white flex-1 space-y-3">
             <div class="flex justify-between items-center px-6 py-4 bg-blue-50/50 rounded-xl border border-blue-100/50">
-                <span class="text-sm font-bold text-blue-800">{{ __('Total Revenue') }}</span>
+                <span class="text-sm font-bold text-blue-800">Total Revenue</span>
                 <span class="text-sm font-black text-blue-900">QAR {{ stats.total_revenue|number_format(0) }}</span>
             </div>
             <div class="flex justify-between items-center px-6 py-4 bg-rose-50/50 rounded-xl border border-rose-100/50">
-                <span class="text-sm font-bold text-rose-800">{{ __('Total Expenses') }}</span>
+                <span class="text-sm font-bold text-rose-800">Total Expenses</span>
                 <span class="text-sm font-black text-rose-900">- QAR {{ stats.total_expenses|number_format(0) }}</span>
             </div>
             <div class="flex justify-between items-center px-6 py-4 bg-amber-50/50 rounded-xl border border-amber-100/50">
-                <span class="text-sm font-bold text-amber-800">{{ __('Cost of Goods & Deductions') }}</span>
-                <span class="text-sm font-black text-amber-900">{{ __('- QAR 0') }}</span>
+                <span class="text-sm font-bold text-amber-800">Cost of Goods & Deductions</span>
+                <span class="text-sm font-black text-amber-900">- QAR 0</span>
             </div>
             
             <div class="border-t border-dashed border-slate-200 my-4"></div>
             
             <div class="flex justify-between items-center px-6 py-4 bg-emerald-50 rounded-xl border border-emerald-200 shadow-sm">
-                <span class="text-base font-black text-emerald-800">{{ __('Final Net Profit') }}</span>
+                <span class="text-base font-black text-emerald-800">Final Net Profit</span>
                 <span class="text-lg font-black text-emerald-600">QAR {{ stats.net_profit|number_format(0) }}</span>
             </div>
         </div>
         <div class="p-4 border-t border-slate-100 flex justify-end bg-white">
-            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">{{ __('Close Window') }}</button>
+            <button onclick="closeModal()" class="text-sm font-bold text-slate-600 hover:text-slate-900 px-4 py-2">Close Window</button>
         </div>
     </div>
 </template>

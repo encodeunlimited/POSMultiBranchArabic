@@ -8,15 +8,15 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        {{ __('tailwind.config = {
+        tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: [\'Inter\', \'sans-serif\'],
+                        sans: ['Inter', 'sans-serif'],
                     }
                 }
             }
-        }') }}
+        }
     </script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -130,7 +130,7 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transform -translate-x-full transition-transform duration-300 {% block sidebar_desktop_class %}md:relative md:translate-x-0{% endblock %}">
         <div class="h-16 flex flex-col justify-center px-6 border-b border-slate-200">
-            <h1 class="text-lg font-bold text-slate-900 leading-tight">{{ __('MT POS and ERP') }}</h1>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">MT POS and ERP</h1>
             <span class="text-xs font-medium text-slate-500">
                 {% if current_user.role == 'Owner' %}
                     Multi-Branch POS
@@ -236,7 +236,7 @@
                         <p class="text-[10px] uppercase font-bold {% if current_user.role == 'Owner' %}text-amber-600{% else %}text-slate-500{% endif %} tracking-wider">{{ current_user.role }}</p>
                     </div>
                 </div>
-                <a href="/logout" class="text-slate-400 hover:text-rose-600 transition-colors p-2" title="{{ __('Logout') }}">
+                <a href="/logout" class="text-slate-400 hover:text-rose-600 transition-colors p-2" title="Logout">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
                 </a>
             </div>
@@ -319,12 +319,12 @@
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden relative z-10 p-6 transform transition-all">
                 <div class="flex items-center gap-3 mb-3 text-amber-500">
                     <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                    <h3 class="text-lg font-bold text-slate-900" id="confirm-title">{{ __('Confirmation Required') }}</h3>
+                    <h3 class="text-lg font-bold text-slate-900" id="confirm-title">Confirmation Required</h3>
                 </div>
-                <p class="text-sm text-slate-600 mb-6" id="confirm-message">{{ __('Are you sure you want to proceed?') }}</p>
+                <p class="text-sm text-slate-600 mb-6" id="confirm-message">Are you sure you want to proceed?</p>
                 <div class="flex justify-end gap-3">
-                    <button id="confirm-btn-cancel" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">{{ __('Cancel') }}</button>
-                    <button id="confirm-btn-ok" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors">{{ __('Confirm') }}</button>
+                    <button id="confirm-btn-cancel" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
+                    <button id="confirm-btn-ok" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors">Confirm</button>
                 </div>
             </div>
         </div>

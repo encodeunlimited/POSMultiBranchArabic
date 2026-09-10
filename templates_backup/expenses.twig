@@ -6,20 +6,20 @@
 {% block content %}
 <div class="mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
     <div>
-        <p class="text-slate-500 text-sm">{{ __('Track shop running costs like rent, electricity, and daily expenses.') }}</p>
+        <p class="text-slate-500 text-sm">Track shop running costs like rent, electricity, and daily expenses.</p>
     </div>
     <div class="flex flex-wrap items-center gap-3">
         <form method="GET" action="/expenses" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
     <input type="date" name="start_date" value="{{ start_date }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
-    <span class="text-slate-400 text-sm hidden sm:inline">{{ __('to') }}</span>
+    <span class="text-slate-400 text-sm hidden sm:inline">to</span>
     <input type="date" name="end_date" value="{{ end_date }}" class="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" required>
     <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
         <button type="submit" class="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors text-center">
-            {{ __('Filter') }}
+            Filter
         </button>
         {% if start_date %}
         <a href="/expenses" class="flex-1 sm:flex-none px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold shadow-sm hover:bg-slate-200 transition-colors text-center">
-            {{ __('Clear') }}
+            Clear
         </a>
         {% endif %}
     </div>
@@ -27,19 +27,19 @@
         {% if current_user.role != 'Cashier' %}
         <button onclick="openModal('manageCategoriesModal')" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors shadow-sm text-sm">
             <i data-lucide="folder-plus" class="w-4 h-4"></i>
-            {{ __('Manage Categories') }}
+            Manage Categories
         </button>
         {% endif %}
         <button onclick="openModal('addExpenseModal')" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 transition-colors shadow-sm text-sm">
             <i data-lucide="plus" class="w-4 h-4"></i>
-            {{ __('Add Expense') }}
+            Add Expense
         </button>
     </div>
 </div>
 
 <div class="bg-slate-900 rounded-xl p-6 mb-6 text-white shadow-md flex justify-between items-center">
     <div>
-        <p class="text-xs font-semibold tracking-wider text-slate-400 mb-1">{{ __('TOTAL EXPENSES (THIS MONTH)') }}</p>
+        <p class="text-xs font-semibold tracking-wider text-slate-400 mb-1">TOTAL EXPENSES (THIS MONTH)</p>
         <h2 class="text-3xl font-black">QAR {{ total_expenses|number_format(2) }}</h2>
     </div>
     <div class="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
@@ -54,7 +54,7 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
                 </div>
-                <input type="text" id="expensesSearch" placeholder="{{ __('Search expenses by category or note...') }}" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+                <input type="text" id="expensesSearch" placeholder="Search expenses by category or note..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
             </div>
         </div>
         <div class="w-full md:w-auto px-4 py-2 border border-slate-200 rounded-lg bg-white flex items-center justify-center md:justify-start gap-2 text-sm text-slate-600 font-medium">
@@ -65,20 +65,20 @@
     {% if expenses is empty %}
         <div class="p-16 flex flex-col items-center justify-center text-center">
             <i data-lucide="wallet" class="w-12 h-12 text-slate-300 mb-4"></i>
-            <p class="text-slate-500 font-medium">{{ __('No expenses recorded yet. Click "Add Expense" to start tracking.') }}</p>
+            <p class="text-slate-500 font-medium">No expenses recorded yet. Click "Add Expense" to start tracking.</p>
         </div>
     {% else %}
         <div class="overflow-x-auto">
             <table id="expensesTable" class="w-full text-left text-sm text-slate-600">
                 <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
                     <tr>
-                        <th class="px-6 py-4">{{ __('ID') }}</th>
-                        <th class="px-6 py-4">{{ __('Branch') }}</th>
-                        <th class="px-6 py-4">{{ __('Category') }}</th>
-                        <th class="px-6 py-4">{{ __('Description') }}</th>
-                        <th class="px-6 py-4">{{ __('Date') }}</th>
-                        <th class="px-6 py-4">{{ __('Amount (QAR)') }}</th>
-                        <th class="px-6 py-4 text-right">{{ __('Actions') }}</th>
+                        <th class="px-6 py-4">ID</th>
+                        <th class="px-6 py-4">Branch</th>
+                        <th class="px-6 py-4">Category</th>
+                        <th class="px-6 py-4">Description</th>
+                        <th class="px-6 py-4">Date</th>
+                        <th class="px-6 py-4">Amount (QAR)</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -100,10 +100,10 @@
                         <td class="px-6 py-4 font-bold text-slate-900">QAR {{ expense.amount|number_format(2) }}</td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button onclick="editItem(this, 'editExpenseModal', '/expenses/edit/{{ expense.id }}')" data-item="{{ expense|json_encode|e('html_attr') }}" class="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-lg transition-colors" title="{{ __('Edit Expense') }}">
+                                <button onclick="editItem(this, 'editExpenseModal', '/expenses/edit/{{ expense.id }}')" data-item="{{ expense|json_encode|e('html_attr') }}" class="text-indigo-600 hover:text-indigo-800 p-2 hover:bg-indigo-50 rounded-lg transition-colors" title="Edit Expense">
                                     <i data-lucide="edit" class="w-4 h-4"></i>
                                 </button>
-                                <button onclick="deleteItem('/expenses/delete/{{ expense.id }}', 'expense')" class="text-rose-500 hover:text-rose-700 p-2 hover:bg-rose-50 rounded-lg transition-colors" title="{{ __('Delete Expense') }}">
+                                <button onclick="deleteItem('/expenses/delete/{{ expense.id }}', 'expense')" class="text-rose-500 hover:text-rose-700 p-2 hover:bg-rose-50 rounded-lg transition-colors" title="Delete Expense">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>
@@ -120,25 +120,25 @@
 <template id="addExpenseModal">
     <div class="flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-lg font-bold text-slate-900">{{ __('Add New Expense') }}</h3>
+            <h3 class="text-lg font-bold text-slate-900">Add New Expense</h3>
             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
         <form onsubmit="event.preventDefault(); submitForm(this, '/expenses/add')" class="p-6 space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Expense Category') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Expense Category</label>
                 <select name="category_id" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                    <option value="" disabled selected>{{ __('Select a category...') }}</option>
+                    <option value="" disabled selected>Select a category...</option>
                     {% for cat in categories %}
                         <option value="{{ cat.id }}">{{ cat.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Description') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
                 <div class="relative">
-                    <input type="text" name="description" placeholder="{{ __('e.g. Paid electricity bill for January') }}" required class="w-full pl-4 pr-10 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                    <input type="text" name="description" placeholder="e.g. Paid electricity bill for January" required class="w-full pl-4 pr-10 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i data-lucide="shield" class="w-4 h-4 text-slate-400"></i>
                     </div>
@@ -147,11 +147,11 @@
             
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Amount (QAR)') }}</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Amount (QAR)</label>
                     <input type="number" step="0.01" name="amount" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Date') }}</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
                     <div class="relative">
                         <input type="datetime-local" name="expense_date" required class="w-full pl-4 pr-10 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -163,10 +163,10 @@
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
                 <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
-                    {{ __('Cancel') }}
+                    Cancel
                 </button>
                 <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors flex items-center">
-                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> {{ __('Save Expense') }}
+                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> Save Expense
                 </button>
             </div>
         </form>
@@ -177,16 +177,16 @@
 <template id="editExpenseModal">
     <div class="flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-lg font-bold text-slate-900">{{ __('Edit Expense') }}</h3>
+            <h3 class="text-lg font-bold text-slate-900">Edit Expense</h3>
             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
         <form class="p-6 space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Expense Category') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Expense Category</label>
                 <select name="category_id" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                    <option value="" disabled>{{ __('Select a category...') }}</option>
+                    <option value="" disabled>Select a category...</option>
                     {% for cat in categories %}
                         <option value="{{ cat.id }}">{{ cat.name }}</option>
                     {% endfor %}
@@ -194,22 +194,22 @@
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Description') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
                 <input type="text" name="description" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Amount (QAR)') }}</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Amount (QAR)</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-slate-500 sm:text-sm">{{ __('QAR') }}</span>
+                            <span class="text-slate-500 sm:text-sm">QAR</span>
                         </div>
                         <input type="number" step="0.01" name="amount" required class="pl-12 w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Date') }}</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
@@ -221,10 +221,10 @@
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
                 <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
-                    {{ __('Cancel') }}
+                    Cancel
                 </button>
                 <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors flex items-center">
-                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> {{ __('Save Changes') }}
+                    <i data-lucide="check" class="w-4 h-4 mr-2"></i> Save Changes
                 </button>
             </div>
         </form>
@@ -235,16 +235,16 @@
 <template id="manageCategoriesModal">
     <div class="flex flex-col h-full max-h-[80vh]">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-lg font-bold text-slate-900">{{ __('Manage Expense Categories') }}</h3>
+            <h3 class="text-lg font-bold text-slate-900">Manage Expense Categories</h3>
             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
         <div class="p-6 border-b border-slate-100 bg-slate-50/50">
             <form onsubmit="event.preventDefault(); submitForm(this, '/expense-category/add')" class="flex gap-3">
-                <input type="text" name="name" placeholder="{{ __('New Category Name...') }}" required class="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                <input type="text" name="name" placeholder="New Category Name..." required class="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                 <button type="submit" class="px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors">
-                    {{ __('Add') }}
+                    Add
                 </button>
             </form>
         </div>
@@ -257,7 +257,7 @@
                 </button>
             </div>
             {% else %}
-                <p class="text-center text-slate-500 text-sm py-4">{{ __('No categories found.') }}</p>
+                <p class="text-center text-slate-500 text-sm py-4">No categories found.</p>
             {% endfor %}
         </div>
     </div>

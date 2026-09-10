@@ -10,11 +10,11 @@
 
 {% block header_actions %}
 <a href="/" class="px-3 py-1.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2 text-sm border border-slate-200">
-    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> <span class="hidden sm:inline">{{ __('Dashboard') }}</span>
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> <span class="hidden sm:inline">Dashboard</span>
 </a>
 {% if active_shift %}
 <button onclick="promptEndShift()" class="px-3 py-1.5 bg-rose-100 text-rose-700 font-medium rounded-lg hover:bg-rose-200 transition-colors flex items-center gap-2 text-sm border border-rose-200 shadow-sm">
-    <i data-lucide="stop-circle" class="w-4 h-4"></i> {{ __('End Shift') }}
+    <i data-lucide="stop-circle" class="w-4 h-4"></i> End Shift
 </button>
 {% endif %}
 {% endblock %}
@@ -94,12 +94,12 @@
                 </div>
                 <input type="text" id="posSearch" placeholder="{{ __('Search...') }}" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
             </div>
-            <label class="flex items-center cursor-pointer gap-2 select-none" title="{{ __('Enable to add items as Returns (negative qty)') }}">
+            <label class="flex items-center cursor-pointer gap-2 select-none" title="Enable to add items as Returns (negative qty)">
                 <div class="relative">
                     <input type="checkbox" id="exchangeModeToggle" class="sr-only peer">
                     <div class="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                 </div>
-                <span class="text-sm font-bold text-slate-600">{{ __('Exchange') }}</span>
+                <span class="text-sm font-bold text-slate-600">Exchange</span>
             </label>
         </div>
 
@@ -110,7 +110,7 @@
             </button>
             {% for category in categories %}
             <button class="category-pill whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition-colors" data-category="{{ category.name|e('html_attr') }}">
-                {{ lang == 'ar' and category.arabic_name ? category.arabic_name : category.name }}
+                {{ category.name }}
             </button>
             {% endfor %}
         </div>
@@ -125,15 +125,13 @@
             {% else %}
                 <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="posProductGrid">
                     {% for product in products %}
-                    {% set displayName = lang == 'ar' and product.arabic_name ? product.arabic_name : product.name %}
-                    {% set secondaryName = lang == 'ar' and product.arabic_name ? product.name : product.arabic_name %}
-                    <div class="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all group select-none pos-product-card" data-barcode="{{ product.barcode|default('') }}" data-category="{{ product.category_name|default('Uncategorized')|e('html_attr') }}" onclick="addToCart({{ product.id }}, '{{ displayName|e('js') }}', {{ product.selling_price }}, {{ product.cost_price|default(0) }}, '{{ product.unit|default('PCS')|e('js') }}')">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all group select-none pos-product-card" data-barcode="{{ product.barcode|default('') }}" data-category="{{ product.category_name|default('Uncategorized')|e('html_attr') }}" onclick="addToCart({{ product.id }}, '{{ product.name|e('js') }}', {{ product.selling_price }}, {{ product.cost_price|default(0) }}, '{{ product.unit|default('PCS')|e('js') }}')">
                         <div class="w-full h-24 bg-slate-100 rounded-lg mb-3 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
                             <i data-lucide="smartphone" class="w-8 h-8 text-slate-300 group-hover:text-indigo-400"></i>
                         </div>
-                        <h4 class="font-medium text-slate-800 text-sm truncate" title="{{ displayName }}">{{ displayName }}</h4>
-                        {% if secondaryName %}
-                            <div class="text-[10px] text-slate-500 font-arabic truncate mt-0.5" {{ lang == 'ar' ? 'dir="ltr"' : 'dir="rtl"' }}>{{ secondaryName }}</div>
+                        <h4 class="font-medium text-slate-800 text-sm truncate" title="{{ product.name }}">{{ product.name }}</h4>
+                        {% if product.arabic_name %}
+                            <div class="text-[10px] text-slate-500 font-arabic truncate mt-0.5" dir="rtl">{{ product.arabic_name }}</div>
                         {% endif %}
                         <div class="mt-2 flex flex-col gap-1">
                             <div class="flex justify-between items-center">
@@ -161,14 +159,14 @@
             
             <!-- Header -->
             <div class="text-center pt-2 pb-2">
-                <h2 class="font-bold text-xl uppercase tracking-widest mb-1 text-slate-900">{{ __('Muneefa Trading') }}</h2>
+                <h2 class="font-bold text-xl uppercase tracking-widest mb-1 text-slate-900">Muneefa Trading</h2>
                 <p class="text-xs mt-1">{{ 'now'|date('d/m/Y h:i A') }}</p>
-                <p class="text-xs mt-0.5 font-bold">{{ __('Contact : 7096 4494') }}</p>
+                <p class="text-xs mt-0.5 font-bold">Contact : 7096 4494</p>
             </div>
             
             <!-- Meta Data -->
             <div class="border-t border-b border-dashed border-slate-900 py-1 mx-4 mb-2 text-[11px] font-bold text-slate-900 text-left">
-                <p class="hidden print:block mb-0.5">{{ __('Inv.#:') }} <span id="receiptInvoice"></span></p>
+                <p class="hidden print:block mb-0.5">Inv.#: <span id="receiptInvoice"></span></p>
                 <p>Cashier: {{ current_user.username }}</p>
             </div>
             
@@ -176,15 +174,15 @@
             <div class="flex-1 overflow-y-auto px-4 py-2 relative">
                 <div id="emptyCartState" class="h-full flex flex-col items-center justify-center text-center text-slate-400 py-12">
                     <i data-lucide="receipt" class="w-10 h-10 mb-2 opacity-50 text-slate-300"></i>
-                    <p class="text-sm font-bold uppercase tracking-widest">{{ __('No Items') }}</p>
+                    <p class="text-sm font-bold uppercase tracking-widest">No Items</p>
                 </div>
                 
                 <div id="cartContentWrapper" class="hidden h-full flex-col">
                     <div class="flex justify-between text-[11px] font-bold border-b border-dashed border-slate-900 pb-1 mb-2 text-slate-900">
-                        <span class="w-[45%] text-left">{{ __('Sl.# Item') }}</span>
-                        <span class="w-[15%] text-center">{{ __('Qty') }}</span>
-                        <span class="w-[20%] text-right">{{ __('Rate') }}</span>
-                        <span class="w-[20%] text-right">{{ __('Total') }}</span>
+                        <span class="w-[45%] text-left">Sl.# Item</span>
+                        <span class="w-[15%] text-center">Qty</span>
+                        <span class="w-[20%] text-right">Rate</span>
+                        <span class="w-[20%] text-right">Total</span>
                     </div>
                     
                     <!-- JS Injected Items -->
@@ -194,12 +192,12 @@
                     <div class="mt-auto">
                         <div class="border-t border-dashed border-slate-900 pt-1 pb-1">
                             <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
-                                <span>{{ __('Total') }}</span>
+                                <span>Total</span>
                                 <span id="cartSubtotal">0.00</span>
                             </div>
                             <div class="flex justify-between text-[11px] mb-1 items-center text-slate-900 font-bold group">
                                 <span class="flex items-center gap-1">
-                                    {{ __('Discount') }} 
+                                    Discount 
                                     <i data-lucide="edit-2" class="w-3 h-3 text-slate-300 group-hover:text-indigo-500 transition-colors no-print"></i>
                                 </span>
                                 <div class="flex items-center">
@@ -208,14 +206,14 @@
                                 </div>
                             </div>
                             <div class="flex justify-between text-[11px] mb-1 text-slate-900 font-bold">
-                                <span>{{ __('Net Total') }}</span>
+                                <span>Net Total</span>
                                 <span id="cartTotal">0.00</span>
                             </div>
                         </div>
                         
                         <div class="border-t border-b border-dashed border-slate-900 pt-1 pb-1 mb-2">
                             <div class="flex justify-between text-[11px] text-slate-900 font-bold">
-                                <span>{{ __('Total Qty.') }}</span>
+                                <span>Total Qty.</span>
                                 <span id="cartTotalQty">0</span>
                             </div>
                         </div>
@@ -223,17 +221,17 @@
                         <!-- Print Only Payment Summary -->
                         <div id="receiptPaymentSummary" class="pt-1 pb-2 hidden text-slate-900 text-center font-bold text-[11px]">
                             <div class="text-left mb-2 uppercase flex flex-col gap-0.5">
-                                <div><span id="receiptPayMethod">{{ __('CASH') }}</span>: <span id="receiptAmount">0.00</span></div>
-                                <div id="receiptTenderedRow" class="hidden"><span>{{ __('TENDERED') }}</span>: <span id="receiptTendered">0.00</span></div>
-                                <div id="receiptChangeRow" class="hidden"><span>{{ __('CHANGE') }}</span>: <span id="receiptChange">0.00</span></div>
+                                <div><span id="receiptPayMethod">CASH</span>: <span id="receiptAmount">0.00</span></div>
+                                <div id="receiptTenderedRow" class="hidden"><span>TENDERED</span>: <span id="receiptTendered">0.00</span></div>
+                                <div id="receiptChangeRow" class="hidden"><span>CHANGE</span>: <span id="receiptChange">0.00</span></div>
                             </div>
-                            <p class="mb-1">{{ __('THANK YOU') }}</p>
-                            <p class="mb-2 uppercase">{{ __('Thanks For Coming To Our Store') }}</p>
+                            <p class="mb-1">THANK YOU</p>
+                            <p class="mb-2 uppercase">Thanks For Coming To Our Store</p>
                             <div class="border-t border-slate-900 pt-2 pb-1 leading-tight">
-                                {{ __('Shop No 02, Umm Al Dome Street.') }}<br>{{ __('Al Muaither') }}
+                                Shop No 02, Umm Al Dome Street.<br>Al Muaither
                             </div>
                             <div class="border-t border-slate-900 pt-1 pb-2 leading-tight text-[10px] uppercase">
-                                {{ __('Note: Selling item should be returned within 24hrs for exchange.') }}
+                                Note: Selling item should be returned within 24hrs for exchange.
                             </div>
                         </div>
                     </div>
@@ -248,7 +246,7 @@
             </button>
             <button onclick="processCheckout()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors uppercase text-sm tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
                 <i data-lucide="printer" class="w-5 h-5"></i>
-                {{ __('Print & Pay') }}
+                Print & Pay
             </button>
         </div>
     </div>
@@ -258,24 +256,24 @@
 <div id="quickCustomerModal" class="fixed inset-0 bg-slate-900/50 z-[60] hidden items-center justify-center backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-lg font-bold text-slate-900">{{ __('Quick Add Customer') }}</h3>
+            <h3 class="text-lg font-bold text-slate-900">Quick Add Customer</h3>
             <button type="button" onclick="closeQuickCustomerModal()" class="text-slate-400 hover:text-slate-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
         <form id="quickCustomerForm" class="p-6 space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Name *') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Name *</label>
                 <input type="text" id="qcName" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Contact / Phone *') }}</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Contact / Phone *</label>
                 <input type="text" id="qcContact" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
             </div>
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onclick="closeQuickCustomerModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">{{ __('Cancel') }}</button>
+                <button type="button" onclick="closeQuickCustomerModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
                 <button type="submit" id="qcSubmitBtn" class="px-4 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md shadow-indigo-200 flex items-center justify-center gap-2">
-                    {{ __('Save') }}
+                    Save
                 </button>
             </div>
         </form>
@@ -294,7 +292,7 @@
         <div class="p-6 space-y-4">
             <div class="flex justify-between items-center p-3 bg-indigo-50 rounded-xl mb-4 text-indigo-900">
                 <span class="font-medium">{{ __('Total Amount Due') }}</span>
-                <span class="font-black text-2xl" id="modalTotalDue">{{ __('QAR 0.00') }}</span>
+                <span class="font-black text-2xl" id="modalTotalDue">QAR 0.00</span>
             </div>
             
             <div>
@@ -309,7 +307,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="button" onclick="openQuickCustomerModal()" class="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors border border-indigo-100 flex items-center justify-center" title="{{ __('Quick Add Customer') }}">
+                    <button type="button" onclick="openQuickCustomerModal()" class="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors border border-indigo-100 flex items-center justify-center" title="Quick Add Customer">
                         <i data-lucide="user-plus" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -327,11 +325,11 @@
                     <input type="number" id="pointsToApply" min="0" step="1" placeholder="{{ __('Points to apply') }}" class="w-full px-3 py-2 border border-emerald-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500">
                     <button onclick="applyLoyaltyPoints()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 whitespace-nowrap">{{ __('Apply') }}</button>
                 </div>
-                <p class="text-xs text-emerald-600 mt-2">{{ __('100 points = QAR 1.00 discount') }}</p>
+                <p class="text-xs text-emerald-600 mt-2">100 points = QAR 1.00 discount</p>
                 
                 <div id="appliedPointsRow" class="hidden justify-between items-center mt-3 pt-3 border-t border-emerald-200">
                     <span class="text-emerald-800 font-medium">{{ __('Points Discount:') }}</span>
-                    <span id="pointsDiscountAmount" class="font-bold text-rose-600">{{ __('- QAR 0.00') }}</span>
+                    <span id="pointsDiscountAmount" class="font-bold text-rose-600">- QAR 0.00</span>
                 </div>
                 <input type="hidden" id="finalPointsApplied" value="0">
             </div>
@@ -365,31 +363,31 @@
             <!-- Cash Input -->
             <div id="cashInputSection" class="mt-4 p-4 border border-emerald-100 bg-emerald-50/30 rounded-xl space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{{ __('Tendered Amount (Cash)') }}</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Tendered Amount (Cash)</label>
                     <input type="number" id="tenderedAmount" class="w-full px-3 py-2 border rounded-lg font-bold text-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0.00" oninput="calculateChange()">
                 </div>
                 <div class="flex justify-between items-center text-sm font-bold">
-                    <span class="text-slate-600">{{ __('Change Due:') }}</span>
-                    <span id="changeAmount" class="text-xl text-emerald-600">{{ __('QAR 0.00') }}</span>
+                    <span class="text-slate-600">Change Due:</span>
+                    <span id="changeAmount" class="text-xl text-emerald-600">QAR 0.00</span>
                 </div>
             </div>
 
             <!-- Split Inputs -->
             <div id="splitInputSection" class="mt-4 p-4 border border-rose-100 bg-rose-50/30 rounded-xl space-y-3 hidden">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{{ __('Split Amounts') }}</p>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Split Amounts</p>
                 <div class="flex items-center justify-between gap-2">
-                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="banknote" class="w-4 h-4"></i> {{ __('Cash:') }}</label>
+                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="banknote" class="w-4 h-4"></i> Cash:</label>
                     <input type="number" id="splitCash" class="w-full px-2 py-1.5 border rounded-lg font-medium outline-none" value="0" oninput="validateSplit()">
                 </div>
                 <div class="flex items-center justify-between gap-2">
-                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="credit-card" class="w-4 h-4"></i> {{ __('Card:') }}</label>
+                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="credit-card" class="w-4 h-4"></i> Card:</label>
                     <input type="number" id="splitCard" class="w-full px-2 py-1.5 border rounded-lg font-medium outline-none" value="0" oninput="validateSplit()">
                 </div>
                 <div class="flex items-center justify-between gap-2">
-                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="smartphone" class="w-4 h-4"></i> {{ __('Fawran:') }}</label>
+                    <label class="text-sm font-medium w-20 flex items-center gap-1"><i data-lucide="smartphone" class="w-4 h-4"></i> Fawran:</label>
                     <input type="number" id="splitFawran" class="w-full px-2 py-1.5 border rounded-lg font-medium outline-none" value="0" oninput="validateSplit()">
                 </div>
-                <div class="text-right text-xs font-bold mt-2" id="splitStatus">{{ __('Remaining: QAR 0.00') }}</div>
+                <div class="text-right text-xs font-bold mt-2" id="splitStatus">Remaining: QAR 0.00</div>
             </div>
 
         </div>
@@ -646,7 +644,7 @@
                         <div class="no-print absolute top-0 right-0 flex gap-1 bg-white pl-1">
                             <button onclick="updateQty(${index}, -1)" class="w-4 h-4 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 flex items-center justify-center font-black pb-0.5">-</button>
                             <button onclick="updateQty(${index}, 1)" class="w-4 h-4 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 flex items-center justify-center font-black pb-0.5">+</button>
-                            <button onclick="removeFromCart(${index})" class="text-rose-500 hover:text-rose-700" title="{{ __('Remove item') }}">
+                            <button onclick="removeFromCart(${index})" class="text-rose-500 hover:text-rose-700" title="Remove item">
                                 <i data-lucide="trash" class="w-3 h-3"></i>
                             </button>
                         </div>
@@ -1042,10 +1040,10 @@
                 b.classList.remove('bg-indigo-600', 'text-white', 'active');
                 b.classList.add('bg-slate-100', 'text-slate-600');
             });
-            btn.classList.remove('bg-slate-100', 'text-slate-600');
-            btn.classList.add('bg-indigo-600', 'text-white', 'active');
+            e.target.classList.remove('bg-slate-100', 'text-slate-600');
+            e.target.classList.add('bg-indigo-600', 'text-white', 'active');
             
-            currentCategory = btn.dataset.category;
+            currentCategory = e.target.dataset.category;
             filterProducts();
         });
     });
