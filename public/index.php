@@ -682,7 +682,7 @@ $app->get('/sales/view/{id}', function (Request $request, Response $response, $a
     }
 
     $stmtItems = $pdo->prepare('
-        SELECT si.*, p.name as product_name, p.unit as product_unit
+        SELECT si.*, p.name as product_name, p.arabic_name as product_arabic_name, p.unit as product_unit
         FROM sale_items si
         LEFT JOIN products p ON si.product_id = p.id
         WHERE si.sale_id = ?

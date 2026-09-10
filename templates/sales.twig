@@ -214,11 +214,13 @@
             sale.items.forEach((item, index) => {
                 const itemTotal = (item.quantity * item.price).toFixed(2);
                 totalQty += Number(item.quantity);
+                const arabicNameHtml = item.product_arabic_name ? `<div class="text-[10px] text-slate-500 mt-0.5 ml-3" dir="rtl" style="font-family: Arial, sans-serif;">${item.product_arabic_name}</div>` : '';
                 html += `
                         <li class="pb-1 mb-1 relative">
                             <div class="flex justify-between items-start">
                                 <div class="w-full text-left leading-tight pr-2">
                                     ${index + 1}) ${item.product_name}
+                                    ${arabicNameHtml}
                                     ${item.product_unit ? `<div class="text-[9px] text-slate-500 italic mt-0.5 ml-3">- Unit: ${item.product_unit}</div>` : ''}
                                 </div>
                             </div>

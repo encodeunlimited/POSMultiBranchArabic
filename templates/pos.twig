@@ -127,12 +127,14 @@
                     {% for product in products %}
                     {% set displayName = lang == 'ar' and product.arabic_name ? product.arabic_name : product.name %}
                     {% set secondaryName = lang == 'ar' and product.arabic_name ? product.name : product.arabic_name %}
-                    <div class="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all group select-none pos-product-card" data-barcode="{{ product.barcode|default('') }}" data-category="{{ product.category_name|default('Uncategorized')|e('html_attr') }}" onclick="addToCart({{ product.id }}, '{{ displayName|e('js') }}', {{ product.selling_price }}, {{ product.cost_price|default(0) }}, '{{ product.unit|default('PCS')|e('js') }}')">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all group select-none pos-product-card" data-barcode="{{ product.barcode|default('') }}" data-category="{{ product.category_name|default('Uncategorized')|e('html_attr') }}" data-arabic="{{ product.arabic_name|default('')|e('html_attr') }}" data-engname="{{ product.name|e('html_attr') }}" onclick="addToCart({{ product.id }}, '{{ product.name|e('js') }}', {{ product.selling_price }}, {{ product.cost_price|default(0) }}, '{{ product.unit|default('PCS')|e('js') }}', null, '{{ product.arabic_name|default('')|e('js') }}')">
                         <div class="w-full h-24 bg-slate-100 rounded-lg mb-3 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
                             <i data-lucide="smartphone" class="w-8 h-8 text-slate-300 group-hover:text-indigo-400"></i>
                         </div>
                         <h4 class="font-medium text-slate-800 text-sm truncate" title="{{ displayName }}">{{ displayName }}</h4>
-                        {% if secondaryName %}
+                        {% if lang == 'ar' and not product.arabic_name %}
+                            <div class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 w-fit mt-0.5">لا يوجد اسم</div>
+                        {% elseif secondaryName %}
                             <div class="text-[10px] text-slate-500 font-arabic truncate mt-0.5" {{ lang == 'ar' ? 'dir="ltr"' : 'dir="rtl"' }}>{{ secondaryName }}</div>
                         {% endif %}
                         <div class="mt-2 flex flex-col gap-1">
@@ -585,6 +587,7 @@
             {
                 id: {{ item.id }},
                 name: "{{ item.name|e('js') }}",
+                arabic_name: "{{ item.arabic_name|default('')|e('js') }}",
                 price: {{ item.price }},
                 cost: 0,
                 unit: "{{ item.unit }}",
@@ -635,12 +638,15 @@
             totalQty += item.quantity;
             
             const unitHtml = item.unit ? `<div class="text-[9px] text-slate-500 italic mt-0.5 ml-3">- Unit: ${item.unit}</div>` : '';
+            // Show arabic name on bill if available
+            const arabicNameHtml = item.arabic_name ? `<div class="text-[10px] text-slate-500 mt-0.5 ml-3" dir="rtl" style="font-family: Arial, sans-serif;">${item.arabic_name}</div>` : '';
             
             cartList.innerHTML += `
                 <li class="pb-1 mb-1 relative">
                     <div class="flex justify-between items-start">
                         <div class="w-full text-left leading-tight pr-12">
                             ${index + 1}) ${item.name}
+                            ${arabicNameHtml}
                             ${unitHtml}
                         </div>
                         <div class="no-print absolute top-0 right-0 flex gap-1 bg-white pl-1">
@@ -691,7 +697,7 @@
         lucide.createIcons();
     }
 
-        function addToCart(id, name, price, cost = 0, unit = 'PCS', qty = null) {
+        function addToCart(id, name, price, cost = 0, unit = 'PCS', qty = null, arabic_name = '') {
         let finalQty = qty !== null ? parseFloat(qty) : 1;
         
         if (qty === null) {
@@ -700,7 +706,7 @@
             
             if (fractionalUnits.includes(unit)) {
                 // Show prompt
-                pendingCartItem = { id, name, price, cost, unit, isExchange };
+                pendingCartItem = { id, name, arabic_name, price, cost, unit, isExchange };
                 document.getElementById('qtyPromptProductName').innerText = name + (isExchange ? ' (RETURN)' : '');
                 document.getElementById('qtyPromptUnit').innerText = unit;
                 document.getElementById('qtyPromptInput').value = '1';
@@ -722,7 +728,7 @@
             }
         } else {
             if (finalQty !== 0) {
-                cart.push({ id, name, price, cost, unit, quantity: finalQty });
+                cart.push({ id, name, arabic_name, price, cost, unit, quantity: finalQty });
             }
         }
         updateCartUI();
@@ -733,7 +739,7 @@
         const qty = parseFloat(document.getElementById('qtyPromptInput').value);
         if (qty > 0) {
             const finalQty = pendingCartItem.isExchange ? -qty : qty;
-            addToCart(pendingCartItem.id, pendingCartItem.name, pendingCartItem.price, pendingCartItem.cost, pendingCartItem.unit, finalQty);
+            addToCart(pendingCartItem.id, pendingCartItem.name, pendingCartItem.price, pendingCartItem.cost, pendingCartItem.unit, finalQty, pendingCartItem.arabic_name || '');
         }
         document.getElementById('quantityPromptModal').classList.add('hidden');
         pendingCartItem = null;

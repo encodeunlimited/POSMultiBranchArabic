@@ -73,7 +73,12 @@
                         <td class="px-6 py-4 text-slate-800">
                             {% set displayName = lang == 'ar' and product.arabic_name ? product.arabic_name : product.name %}
                             {% set secondaryName = lang == 'ar' and product.arabic_name ? product.name : product.arabic_name %}
-                            <div>{{ displayName }}</div>
+                            <div class="flex items-center gap-2">
+                                <span>{{ displayName }}</span>
+                                {% if lang == 'ar' and not product.arabic_name %}
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded border border-amber-200 whitespace-nowrap">لا يوجد اسم</span>
+                                {% endif %}
+                            </div>
                             {% if secondaryName %}
                             <div class="text-xs text-slate-500 font-arabic mt-0.5" {{ lang == 'ar' ? 'dir="ltr"' : 'dir="rtl"' }}>{{ secondaryName }}</div>
                             {% endif %}
