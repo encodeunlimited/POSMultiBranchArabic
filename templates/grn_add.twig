@@ -213,7 +213,8 @@
         const supplierId = supplierSelect.value;
         const supplierName = supplierId ? supplierSelect.options[supplierSelect.selectedIndex].text : '';
         const notes = document.getElementById('grnNotes').value.trim();
-        const paymentMethod = document.getElementById('grnPaymentMethod').value;
+        const paymentMethodEl = document.getElementById('grnPaymentMethod');
+        const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'Cash';
         const btnSubmit = document.getElementById('btnSubmitGrn');
         
         if (!supplierId) {
